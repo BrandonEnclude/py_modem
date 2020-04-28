@@ -1,12 +1,17 @@
 import asyncio
-import websockets
+import websockets, ssl
+import pathlib
 import json
 from modem import SIMS
 import time
 import os
 
-URI = os.environ.get('WEBSOCKET_URI', 'ws://localhost:8000')
+URI = os.environ.get('WEBSOCKET_URI', 'wss://imugi.io/ws/')
 RECONNECT_DELAY = int(os.environ.get('RECONNECT_DELAY', 3))
+
+ssl_context = ssl.SSLContext()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
 
 class App:
     def __init__(self, URI, debug = False):
@@ -17,7 +22,7 @@ class App:
 
     async def listen(self):
         try:
-            async with websockets.connect(self.URI) as websocket:
+            async with websockets.connect(self.URI, ssl = ssl_context) as websocket:
                 self.websocket = websocket
                 while True:
                     msg = await websocket.recv()
@@ -58,8 +63,11 @@ class App:
     ### SIM Methods ###
     async def available_sims(self, sims):
         self.sims = SIMS(json.loads(sims), self.websocket)
-        await self._connect_sims()
-        await self.sim_status()
+        try:
+            await self._connect_sims()
+            await self.sim_status()
+        except Exception as e:
+            print(repr(e))
 
     async def _connect_sims(self):
         await self.sims.connect_all()

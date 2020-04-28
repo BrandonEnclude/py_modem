@@ -1,5 +1,4 @@
 emoji==0.5.4
-pkg-resources==0.0.0
 pyserial==3.4
 python-gsmmodem-new==0.12
 websockets==8.1

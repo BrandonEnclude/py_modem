@@ -3,7 +3,7 @@ from gsmmodem.modem import GsmModem, StatusReport, Sms, ReceivedSms
 from gsmmodem.pdu import decodeSmsPdu
 from gsmmodem.exceptions import TimeoutException
 import logging
-import threading
+from threading import Thread
 import logging
 import asyncio
 import json
@@ -93,10 +93,9 @@ class SIM:
         if self.listener:
             self.listener.modem.close()
             self.listener = None
-        self.listener = SerialListener(self.number, self.port, self.pin, self.handle_sms) #TODO: Can this be async?
-
+        self.listener = SerialListener(self.number, self.port, self.pin, self.handle_sms)
     async def get_stored_messages(self):
-        storedMessages = self.listener.list_stored_sms_with_index()
+        storedMessages = await self.listener.list_stored_sms_with_index()
         if storedMessages is not None:
             for sms in storedMessages:
                 if type(sms) is StatusReport:
@@ -113,12 +112,17 @@ class SIM:
             del self.listener
             self.listener = None
 
-    async def handle_sms(self, sms):
+    def handle_sms(self, sms):
+        print(f'>>{sms.text}')
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
+        res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         try:
-            await self.socket.send(json.dumps({"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}))
-        except Exception as e:
-            print(str(e))
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.socket.send(json.dumps(res)))
+        except RuntimeError: #There is no running event loop, so create one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self.socket.send(json.dumps(res)))
 
     async def send_sms(self, number, msg):
         if not self.connected:
@@ -135,9 +139,9 @@ class SIM:
         except:
             return False
 
-class SerialListener(threading.Thread):
+class SerialListener(Thread):
     def __init__(self, number, port, pin, callback, BAUDRATE = 115200, smsTextMode = False):
-        threading.Thread.__init__(self)
+        Thread.__init__(self)
         self.number = number
         self.port = port
         self.pin = pin
@@ -163,19 +167,27 @@ class SerialListener(threading.Thread):
             self.modem.close()
 
     async def send_sms(self, recipient, text):
-        asyncio.get_event_loop().run_in_executor(None, self.modem.sendSms(recipient, text))
+        return await asyncio.coroutine(self.modem.sendSms)(recipient, text)
 
     async def delete_stored_sms(self, msg_index):
-        asyncio.get_event_loop().run_in_executor(None, self.modem.deleteStoredSms(msg_index))
+        return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
 
     async def close(self):
         asyncio.get_event_loop().run_in_executor(None, self.modem.close())
 
-    def list_stored_sms_with_index(self):
+    async def list_stored_sms_with_index(self):
         try:
-            return self.modem.listStoredSmsWithIndex(memory='MT')
+            return await asyncio.coroutine(self.modem.listStoredSmsWithIndex)(memory='MT')
         except Exception as e:
+            print('===list_stored_sms_with_index===')
             self.status = repr(e)
+
+    @property
+    def signal_strength(self):
+        try:
+            return self.modem.signalStrength
+        except:
+            return -1
 
     @property
     def signal_strength(self):
@@ -201,7 +213,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    asyncio.get_event_loop().run_in_executor(None, self.smsReceivedCallback(sms))
+                    self.smsReceivedCallback(sms)
                 except Exception:
                     self.log.error('error in smsReceivedCallback', exc_info=True)
     # Revised method to include memory index on the Sms object for future deletion
