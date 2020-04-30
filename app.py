@@ -7,13 +7,14 @@ import time
 import os
 
 URI = os.environ.get('WEBSOCKET_URI', 'wss://imugi.io/ws/')
+WS_KEY = os.environ.get('WS_KEY', 'ws_key')
 # URI = 'ws://localhost:8000/ws/'
 RECONNECT_DELAY = int(os.environ.get('RECONNECT_DELAY', 3))
 
 ssl_context = ssl.SSLContext()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
-headers={'ws-key': 'ws_key'}
+headers={'ws-key': WS_KEY}
 
 class App:
     def __init__(self, URI, debug = False):
