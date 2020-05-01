@@ -3,7 +3,7 @@ version: '3.7'
 services:
   sms_client:
     container_name: py-modem
-    restart: unless-stopped
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile
