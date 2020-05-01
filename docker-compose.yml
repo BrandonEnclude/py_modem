@@ -1,0 +1,21 @@
+version: '3.7'
+
+services:
+  sms_client:
+    container_name: py-modem
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python app.py
+    devices:
+      - "/dev/ttyXRUSB0:/dev/ttyXRUSB0"
+      - "/dev/ttyXRUSB1:/dev/ttyXRUSB1"
+      - "/dev/ttyXRUSB2:/dev/ttyXRUSB2"
+      - "/dev/ttyXRUSB3:/dev/ttyXRUSB3"
+      - "/dev/ttyXRUSB4:/dev/ttyXRUSB4"
+      - "/dev/ttyXRUSB5:/dev/ttyXRUSB5"
+      - "/dev/ttyXRUSB6:/dev/ttyXRUSB6"
+      - "/dev/ttyXRUSB7:/dev/ttyXRUSB7"
+    env_file:
+      - ./.env.prod

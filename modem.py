@@ -102,8 +102,9 @@ class SIM:
                     self.listener.modem.deleteStoredSms(sms.msgIndex, memory='MT')
                 else:
                     try:
-                        await self.handle_sms(sms)
+                        self.handle_sms(sms)
                     except Exception as e:
+                        print(repr(e), flush=True)
                         logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
 
     async def disconnect(self):
@@ -113,7 +114,6 @@ class SIM:
             self.listener = None
 
     def handle_sms(self, sms):
-        print(f'>>{sms.text}')
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         try:
@@ -179,7 +179,6 @@ class SerialListener(Thread):
         try:
             return await asyncio.coroutine(self.modem.listStoredSmsWithIndex)(memory='MT')
         except Exception as e:
-            print('===list_stored_sms_with_index===')
             self.status = repr(e)
 
     @property

@@ -6,9 +6,8 @@ from modem import SIMS
 import time
 import os
 
-URI = os.environ.get('WEBSOCKET_URI', 'wss://imugi.io/ws/')
-WS_KEY = os.environ.get('WS_KEY', 'ws_key')
-# URI = 'ws://localhost:8000/ws/'
+URI = os.environ.get('WEBSOCKET_URI')
+WS_KEY = os.environ.get('WS_KEY')
 RECONNECT_DELAY = int(os.environ.get('RECONNECT_DELAY', 3))
 
 ssl_context = ssl.SSLContext()
@@ -25,7 +24,6 @@ class App:
 
     async def listen(self):
         try:
-            # async with websockets.connect(self.URI, extra_headers=headers) as websocket:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 while True:
@@ -35,7 +33,6 @@ class App:
             await self._teardown_and_rebuild()
 
     async def _on_message(self, msg):
-        print(f'<<{msg}')
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None:
@@ -71,7 +68,7 @@ class App:
             await self._connect_sims()
             await self.sim_status()
         except Exception as e:
-            print(repr(e))
+            print(repr(e), flush=True)
 
     async def _connect_sims(self):
         await self.sims.connect_all()

@@ -147,3 +147,4 @@ pyvenv.cfg
 *.ini
 include/
 share/
+.env.prod
