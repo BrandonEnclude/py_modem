@@ -5,6 +5,7 @@ import json
 from modem import SIMS
 import time
 import os
+import sys
 
 URI = os.environ.get('WEBSOCKET_URI')
 WS_KEY = os.environ.get('WS_KEY')
@@ -48,7 +49,7 @@ class App:
         try:
             await self.listen()
         except RecursionError:
-            pass
+            sys.exit()
         except Exception as e:
             #TODO: log error
             print(repr(e), flush=True)
