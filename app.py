@@ -49,6 +49,7 @@ class App:
             await self.listen()
         except Exception as e:
             #TODO: log error
+            print(repr(e), flush=True)
             await self._teardown_and_rebuild()
 
     def _extract_params(self, jsonrpc):

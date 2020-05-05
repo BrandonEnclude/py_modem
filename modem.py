@@ -123,6 +123,8 @@ class SIM:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self.socket.send(json.dumps(res)))
+        except Exception as e:
+            print(repr(e), flush=True)
 
     async def send_sms(self, number, msg):
         if not self.connected:
