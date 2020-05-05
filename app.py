@@ -47,6 +47,8 @@ class App:
         await asyncio.sleep(delay)
         try:
             await self.listen()
+        except RecursionError:
+            pass
         except Exception as e:
             #TODO: log error
             print(repr(e), flush=True)
