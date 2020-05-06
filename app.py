@@ -85,13 +85,13 @@ class App:
     async def sim_status(self, id = None):
         await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}}))
 
-    async def send_sms(self, id, msg, sim_number, recipient_number):
+    async def send_sms(self, msgId, msg, sim_number, recipient_number):
         try:
-            await self.sims.send_sms(id, msg, sim_number, recipient_number)
+            await self.sims.send_sms(msg, sim_number, recipient_number)
         except Exception as e:
-            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'message': f'ERR: {repr(e)}'}}))
+            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
         else:
-            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'message': 'Sent'}}))
+            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
 
     async def delete_stored_sms(self, sim_number, msg_index):
         await self.sims.delete_stored_sms(sim_number, msg_index)
