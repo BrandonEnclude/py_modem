@@ -43,7 +43,7 @@ class SIMS:
             sims[key] = self.sims[key].to_dict()
         return sims
 
-    async def send_sms(self, id, msg, sim_number, recipient_number, **kwargs):
+    async def send_sms(self, msg, sim_number, recipient_number, **kwargs):
         sim = self.get(sim_number)
         await sim.send_sms(recipient_number, msg)
 
