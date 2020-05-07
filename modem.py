@@ -155,7 +155,6 @@ class SerialListener(Thread):
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
-            logging.error('at %s', 'SerialListener.__init__', exc_info=e)
             self.status = 'Timeout Exception: Unable to connect to modem. Check that it is powered on and connected.'
         except Exception as e:
             logging.error('at %s', 'SerialListener.__init__', exc_info=e)
