@@ -19,3 +19,5 @@ services:
       - "/dev/ttyXRUSB7:/dev/ttyXRUSB7"
     env_file:
       - ./.env.prod
+    volumes:
+      - ./error.log:./error.log

@@ -2,10 +2,13 @@ import asyncio
 import websockets, ssl
 import pathlib
 import json
+import logging
 from modem import SIMS
 import time
 import os
 import sys
+
+logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
 
 URI = os.environ.get('WEBSOCKET_URI', 'ws://localhost:8000/ws/')
 WS_KEY = os.environ.get('WS_KEY', 'ws_key')
@@ -35,7 +38,7 @@ class App:
                     msg = await websocket.recv()
                     await self._on_message(msg)
         except Exception as e:
-            print(repr(e), flush=True)
+            logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
 
     async def keep_alive(self):
@@ -53,10 +56,11 @@ class App:
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
             await self.sims.close_all()
-        except AttributeError:
+        except AttributeError as e:
+            logging.error('at %s', 'App._tear_down', exc_info=e)
             pass
         except Exception as e:
-            print(repr(e), flush=True)
+            logging.error('at %s', 'App._tear_down', exc_info=e)
         self.stay_connected = False
 
     def _extract_params(self, jsonrpc):
@@ -64,8 +68,6 @@ class App:
             return None, None, None
         method_name = jsonrpc['result']['method'] if 'result' in jsonrpc.keys() else jsonrpc['method']
         namespace, method_name = method_name.split('.')
-        if method_name.startswith('_') or method_name == 'start':
-            raise Exception('Cannot access private methods')
         params = jsonrpc['result']['params'] if 'result' in jsonrpc.keys() else jsonrpc['params']
         return namespace, method_name, params
 
@@ -76,7 +78,7 @@ class App:
             await self._connect_sims()
             await self.sim_status()
         except Exception as e:
-            print(repr(e), flush=True)
+            logging.error('at %s', 'App.available_sims', exc_info=e)
 
     async def _connect_sims(self):
         await self.sims.connect_all()
@@ -89,6 +91,7 @@ class App:
         try:
             await self.sims.send_sms(msg, sim_number, recipient_number)
         except Exception as e:
+            logging.error('at %s', 'App.send_sms', exc_info=e)
             await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
         else:
             await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))

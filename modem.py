@@ -2,7 +2,6 @@ from types import MethodType
 from gsmmodem.modem import GsmModem, StatusReport, Sms, ReceivedSms
 from gsmmodem.pdu import decodeSmsPdu
 from gsmmodem.exceptions import TimeoutException
-import logging
 from threading import Thread
 import logging
 import asyncio
@@ -104,7 +103,6 @@ class SIM:
                     try:
                         self.handle_sms(sms)
                     except Exception as e:
-                        print(repr(e), flush=True)
                         logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
 
     async def disconnect(self):
@@ -124,7 +122,7 @@ class SIM:
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self.socket.send(json.dumps(res)))
         except Exception as e:
-            print(repr(e), flush=True)
+            logging.error('at %s', 'SIM.handle_sms', exc_info=e)
 
     async def send_sms(self, number, msg):
         if not self.connected:
@@ -138,7 +136,8 @@ class SIM:
         try:
             res = self.listener.modem.write('AT', parseError=False, timeout=0.3)
             return res is not None and 'OK' in res
-        except:
+        except Exception as e:
+            logging.error('at %s', 'SIM.connected', exc_info=e)
             return False
 
 class SerialListener(Thread):
@@ -155,10 +154,11 @@ class SerialListener(Thread):
         self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.callback)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
-        except TimeoutException:
+        except TimeoutException as e:
+            logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
             self.status = 'Timeout Exception: Unable to connect to modem. Check that it is powered on and connected.'
         except Exception as e:
-            self.status = repr(e)
+            logging.error('at %s', 'SerialListener.__init__', exc_info=e)
 
     def run(self):
         try:
@@ -181,20 +181,14 @@ class SerialListener(Thread):
         try:
             return await asyncio.coroutine(self.modem.listStoredSmsWithIndex)(memory='MT')
         except Exception as e:
-            self.status = repr(e)
+            logging.error('at %s', 'SerialListener.list_stored_sms_with_index', exc_info=e)
 
     @property
     def signal_strength(self):
         try:
             return self.modem.signalStrength
-        except:
-            return -1
-
-    @property
-    def signal_strength(self):
-        try:
-            return self.modem.signalStrength
-        except:
+        except Exception as e:
+            logging.error('at %s', 'SerialListener.signal_strength', exc_info=e)
             return -1
 
 class Modem(GsmModem):
@@ -215,8 +209,8 @@ class Modem(GsmModem):
                 sms.msgIndex = msgIndex
                 try:
                     self.smsReceivedCallback(sms)
-                except Exception:
-                    self.log.error('error in smsReceivedCallback', exc_info=True)
+                except Exception as e:
+                    logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
     # Revised method to include memory index on the Sms object for future deletion
     def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory=None):
         self._setSmsMemory(readDelete=memory)
