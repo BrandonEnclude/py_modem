@@ -21,3 +21,6 @@ services:
       - ./.env.prod
     volumes:
       - error.log:error.log
+
+volumes:
+  error.log:
