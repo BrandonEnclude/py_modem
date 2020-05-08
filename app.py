@@ -56,11 +56,11 @@ class App:
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
             await self.sims.close_all()
+            await self.websocket.close()
         except AttributeError as e:
             pass
         except Exception as e:
             logging.error('at %s', 'App._tear_down', exc_info=e)
-        await self.websocket.close()
         self.stay_connected = False
 
     def _extract_params(self, jsonrpc):
