@@ -24,8 +24,9 @@ class SIMS:
 
     async def connect_all(self):
         for key in self.sims.keys():
-            if not self.sims[key].connected:
-                await self.sims[key].connect()
+            await self.sims[key].connect()
+            # if not self.sims[key].connected:
+            #     await self.sims[key].connect()
 
     async def close_all(self):
         for key in self.sims.keys():
