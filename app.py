@@ -47,7 +47,6 @@ class App:
             await asyncio.sleep(60)
 
     async def _on_message(self, msg):
-        print(msg, flush=True)
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None:
