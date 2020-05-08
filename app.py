@@ -35,7 +35,7 @@ class App:
                 asyncio.ensure_future(self.keep_alive(websocket))
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
                 while self.stay_connected:
-                    msg = await self.websocket.recv()
+                    msg = await websocket.recv()
                     await self._on_message(msg)
         except Exception as e:
             logging.error('at %s', 'App.listen', exc_info=e)
@@ -47,7 +47,7 @@ class App:
             await asyncio.sleep(60)
 
     async def _on_message(self, msg):
-        print(msg)
+        print(msg, flush=True)
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None:
