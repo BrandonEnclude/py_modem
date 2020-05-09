@@ -32,7 +32,7 @@ class App:
             # async with websockets.connect(self.URI, extra_headers=headers) as websocket:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
-                asyncio.ensure_future(self.keep_alive(websocket))
+                asyncio.ensure_future(self.keep_alive(self.websocket))
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
                 while self.stay_connected:
                     msg = await websocket.recv()
@@ -44,7 +44,7 @@ class App:
     async def keep_alive(self, ws):
         while ws.open and self.stay_connected:
             await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
-            await asyncio.sleep(60)
+            await asyncio.sleep(30)
 
     async def _on_message(self, msg):
         jsonrpc = json.loads(msg)
