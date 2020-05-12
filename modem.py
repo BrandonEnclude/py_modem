@@ -123,7 +123,7 @@ class SIM:
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         loop = asyncio.new_event_loop()
-        loop.run_until_complete(self.socket.send(json.dumps(res))
+        loop.run_until_complete(self.socket.send(json.dumps(res)))
         loop.close()
 
     async def send_sms(self, number, msg):
