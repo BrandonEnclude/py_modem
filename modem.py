@@ -101,7 +101,7 @@ class SIM:
                     asyncio.create_task(asyncio.coroutine(self.listener.modem.deleteStoredSms)(sms.msgIndex, memory='MT')) 
                 else:
                     try:
-                        asyncio.create_task(self.handle_sms(sms))
+                        self.handle_sms(sms)
                     except Exception as e:
                         logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
 
@@ -111,18 +111,10 @@ class SIM:
             del self.listener
             self.listener = None
 
-    async def handle_sms(self, sms):
+    def handle_sms(self, sms):
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        await self.socket.send(json.dumps(res))
-        # try:
-        #     asyncio.create_task(self.socket.send(json.dumps(res)))
-        # # except RuntimeError: #There is no running event loop, so create one
-        # #     loop = asyncio.new_event_loop()
-        # #     asyncio.set_event_loop(loop)
-        # #     loop.run_until_complete(self.socket.send(json.dumps(res)))
-        # except Exception as e:
-        #     logging.error('at %s', 'SIM.handle_sms', exc_info=e)
+        asyncio.create_task(self.socket.send(json.dumps(res))
 
     async def send_sms(self, number, msg):
         await self.listener.send_sms(number, emoji.demojize(msg))
@@ -206,12 +198,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    if asyncio.is_running():
-                        asyncio.create_task(self.smsReceivedCallback(sms))
-                    else:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        loop.run_until_complete(self.smsReceivedCallback(sms))
+                    self.smsReceivedCallback(sms)
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
