@@ -13,14 +13,13 @@ import emoji
 logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
 
 class SIMS:
-    def __init__(self, sims, socket):
+    def __init__(self, sims, socket, sms_received_callback):
         self.sims = {}
-        self.socket = socket
         for sim in sims:
             number = sim['fields']['phone_number']
             port = sim['fields']['port_number']
             pin = sim['fields']['pin_number']
-            self.sims[number] = SIM(number, port, pin, socket)
+            self.sims[number] = SIM(number, port, pin, socket, sms_received_callback)
 
     async def connect_all(self):
         for key in self.sims.keys():
@@ -61,12 +60,13 @@ class SIMS:
             del self.sims[number]
 
 class SIM:
-    def __init__(self, number, port, pin, socket):
+    def __init__(self, number, port, pin, socket, sms_received_callback):
         self.listener = None
         self.number = number
         self.port = port
         self.pin = None if pin is None or pin == 'None' else int(pin)
         self.socket = socket
+        self.sms_received_callback = sms_received_callback
 
     def to_dict(self):
         return {'number': self.number, 'port': self.port, 'pin': self.pin, 'connected': self.connected, 'status': self.status, 'signal strength': self.signal_strength}
@@ -91,7 +91,7 @@ class SIM:
         if self.listener:
             self.listener.modem.close()
             self.listener = None
-        self.listener = SerialListener(self.number, self.port, self.pin, self.handle_sms)
+        self.listener = SerialListener(self.number, self.port, self.pin, self.sms_received_callback)
     async def get_stored_messages(self):
         storedMessages = await self.listener.list_stored_sms_with_index()
         if storedMessages is not None:
@@ -101,7 +101,7 @@ class SIM:
                     asyncio.create_task(asyncio.coroutine(self.listener.modem.deleteStoredSms)(sms.msgIndex, memory='MT')) 
                 else:
                     try:
-                        self.handle_sms(sms)
+                        self.sms_received_callback
                     except Exception as e:
                         logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
 
@@ -131,17 +131,17 @@ class SIM:
             return False
 
 class SerialListener(Thread):
-    def __init__(self, number, port, pin, callback, BAUDRATE = 115200, smsTextMode = False):
+    def __init__(self, number, port, pin, sms_received_callback, BAUDRATE = 115200, smsTextMode = False):
         Thread.__init__(self)
         self.number = number
         self.port = port
         self.pin = pin
-        self.callback = callback
+        self.sms_received_callback = sms_received_callback
         self.status = None
         self.BAUDRATE = BAUDRATE
         self.smsTextMode = smsTextMode
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.callback)
+        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.sms_received_callback)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
