@@ -111,7 +111,7 @@ class SIM:
             del self.listener
             self.listener = None
 
-    def handle_sms(self, sms):
+    async def handle_sms(self, sms):
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         await self.socket.send(json.dumps(res))
