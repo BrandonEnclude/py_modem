@@ -192,7 +192,7 @@ class SerialListener(Thread):
 
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
-        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
+        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=None)
 
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory=None):
