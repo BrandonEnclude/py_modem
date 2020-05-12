@@ -48,11 +48,6 @@ class App:
             method = getattr(self, method_name)
             await method(**params)
 
-    def _handle_incoming_sms(self, sms, sim_number):
-        data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': sim_number, 'sender': sms.number, 'message': sms.text }
-        res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        asyncio.create_task(self.websocket.send(json.dumps(res)))
-
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
             await self.sims.close_all()
@@ -73,7 +68,7 @@ class App:
 
     ### SIM Methods ###
     async def available_sims(self, sims):
-        self.sims = SIMS(json.loads(sims), self.websocket, self._handle_incoming_sms)
+        self.sims = SIMS(json.loads(sims), self.websocket)
         try:
             await self._connect_sims()
             await self.sim_status()
