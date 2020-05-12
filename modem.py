@@ -168,7 +168,7 @@ class SerialListener(Thread):
             self.modem.close()
 
     async def send_sms(self, recipient, text):
-        return await asyncio.coroutine(self.modem.sendSms)(recipient, text)
+        asyncio.create_task(asyncio.coroutine(self.modem.sendSms)(recipient, text))
 
     async def delete_stored_sms(self, msg_index):
         return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
