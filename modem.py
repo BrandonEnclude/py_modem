@@ -49,7 +49,7 @@ class SIMS:
         await sim.delete_stored_sms(msg_index)
 
     def get(self, number):
-        self,sims.get(number)
+        self.sims.get(number)
 
     def remove(self, number):
         sim = self.sims.get(number)
