@@ -206,7 +206,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    self.loop.call_soon_threadsafe(self.smsReceivedCallback(sms))
+                    self.loop.create_task(self.smsReceivedCallback(sms))
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
