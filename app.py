@@ -36,6 +36,7 @@ class App:
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
                 while self.stay_connected:
                     msg = await websocket.recv()
+                    asyncio.create_task(self._on_message(msg))
                     await self._on_message(msg)
         except Exception as e:
             logging.error('at %s', 'App.listen', exc_info=e)
