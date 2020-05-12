@@ -114,6 +114,7 @@ class SIM:
     async def handle_sms_async(self, sms):
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
+        print('Sending incoming sms to socket...', flush=True)
         asyncio.create_task(self.socket.send(json.dumps(res)))
 
     def handle_sms(self, sms):
