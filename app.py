@@ -107,7 +107,7 @@ class App:
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:
-            await self.sims.delete_stored_sms(sim_number, msg_index)
+            asyncio.ensure_future(self.sims.delete_stored_sms(sim_number, msg_index))
 
     async def reconnect(self):
         await self._tear_down(3)
