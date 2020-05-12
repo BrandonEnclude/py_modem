@@ -33,10 +33,10 @@ class App:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
-                asyncio.create_task(self.poll_modem(self.websocket))
+                asyncio.ensure_future(self.poll_modem(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
-                    asyncio.create_task(self._on_message(msg))
+                    asyncio.ensure_future(self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
             await self._tear_down(3)
@@ -47,7 +47,7 @@ class App:
     async def poll_modem(self, ws):
         while ws.open and self.stay_connected:
             await asyncio.sleep(1)
-            await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
+            # await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
             # await self.sims.get_stored_messages()
 
     async def _on_message(self, msg):
@@ -56,7 +56,7 @@ class App:
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None and getattr(self, method_name) is not None:
             method = getattr(self, method_name)
-            asyncio.create_task(method(**params))
+            await method(**params)
 
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
@@ -80,36 +80,34 @@ class App:
     async def available_sims(self, sims):
         self.sims = SIMS(json.loads(sims), self.websocket)
         try:
-            asyncio.create_task(self._connect_sims())
-            asyncio.create_task(self.sim_status())
+            await self._connect_sims()
+            await self.sim_status()
         except Exception as e:
             logging.error('at %s', 'App.available_sims', exc_info=e)
 
     async def _connect_sims(self):
         if self.sims:
-            asyncio.create_task(self.sims.connect_all())
+            await self.sims.connect_all()
 
     async def sim_status(self, id = None):
         if self.sims:
-            payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}})
-            asyncio.create_task(self.websocket.send(payload))
+            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}}))
 
     async def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
             try:
-                asyncio.create_task(self.sims.send_sms(msg, sim_number, recipient_number))
+                await self.sims.send_sms(msg, sim_number, recipient_number)
             except (CmsError, CmeError) as e:
-                payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}})
+                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             except Exception as e:
                 logging.error('at %s', 'App.send_sms', exc_info=e)
-                payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}})
+                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             else:
-                payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}})
-            asyncio.create_task(self.websocket.send(payload))
+                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:
-            asyncio.create_task(self.sims.delete_stored_sms(sim_number, msg_index))
+            await self.sims.delete_stored_sms(sim_number, msg_index)
 
     async def reconnect(self):
         await self._tear_down(3)
