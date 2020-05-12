@@ -116,7 +116,7 @@ class SIM:
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         print(f'Sending incoming sms to socket: {sms.text}', flush=True)
         print(self.socket, flush=True)
-        asyncio.ensure_future(self.socket.send(json.dumps(res)))
+        await self.socket.send(json.dumps(res))
 
     def handle_sms(self, sms):
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
@@ -208,7 +208,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    self.loop.create_task(self.smsReceivedCallback(sms))
+                    self.loop.ensure_future(self.smsReceivedCallback(sms))
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     

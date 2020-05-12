@@ -38,7 +38,7 @@ class App:
                     asyncio.ensure_future(self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
-            self._tear_down(3)
+            await self._tear_down(3)
         except Exception as e:
             logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
