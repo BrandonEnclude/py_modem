@@ -1,5 +1,6 @@
 import asyncio
 import websockets, ssl
+from gsmmodem.exceptions import CmsError, CmeError
 import pathlib
 import json
 import logging
@@ -29,10 +30,8 @@ class App:
 
     async def listen(self):
         try:
-            # async with websockets.connect(self.URI, extra_headers=headers) as websocket:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
-                # asyncio.ensure_future(self.keep_alive(self.websocket))
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
                 while self.stay_connected:
                     msg = await websocket.recv()
@@ -41,12 +40,8 @@ class App:
             logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
 
-    async def keep_alive(self, ws):
-        while ws.open and self.stay_connected:
-            await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
-            await asyncio.sleep(30)
-
     async def _on_message(self, msg):
+        # Messages are passed according to the jsonrpc specification https://www.jsonrpc.org/specification
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None:
@@ -90,6 +85,8 @@ class App:
     async def send_sms(self, msgId, msg, sim_number, recipient_number):
         try:
             await self.sims.send_sms(msg, sim_number, recipient_number)
+        except (CmsError, CmeError) as e:
+            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
         except Exception as e:
             logging.error('at %s', 'App.send_sms', exc_info=e)
             await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))

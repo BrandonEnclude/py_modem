@@ -25,8 +25,6 @@ class SIMS:
     async def connect_all(self):
         for key in self.sims.keys():
             await self.sims[key].connect()
-            # if not self.sims[key].connected:
-            #     await self.sims[key].connect()
 
     async def close_all(self):
         for key in self.sims.keys():
@@ -34,8 +32,7 @@ class SIMS:
 
     async def get_stored_messages(self):
         for key in self.sims.keys():
-            if self.sims[key].connected:
-                await self.sims[key].get_stored_messages()
+            await self.sims[key].get_stored_messages()
 
     def to_dict(self):
         sims = {}
@@ -52,14 +49,12 @@ class SIMS:
         await sim.delete_stored_sms(msg_index)
 
     def get(self, number):
-        try:
-            return self.sims[number]
-        except KeyError:
-            return None
+        self,sims.get(number)
 
     def remove(self, number):
-        if self.sims[number] is not None:
-            self.sims[number].disconnect()
+        sim = self.sims.get(number)
+        if sim is not None:
+            sim.disconnect()
             del self.sims[number]
 
 class SIM:
@@ -112,23 +107,20 @@ class SIM:
             del self.listener
             self.listener = None
 
-    def handle_sms(self, sms):
+    async def handle_sms(self, sms):
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        try:
-            # loop = asyncio.get_event_loop()
-            # loop.create_task(self.socket.send(json.dumps(res)))
-            asyncio.create_task(self.socket.send(json.dumps(res)))
-        except RuntimeError: #There is no running event loop, so create one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self.socket.send(json.dumps(res)))
-        except Exception as e:
-            logging.error('at %s', 'SIM.handle_sms', exc_info=e)
+        await self.socket.send(json.dumps(res))
+        # try:
+        #     asyncio.create_task(self.socket.send(json.dumps(res)))
+        # # except RuntimeError: #There is no running event loop, so create one
+        # #     loop = asyncio.new_event_loop()
+        # #     asyncio.set_event_loop(loop)
+        # #     loop.run_until_complete(self.socket.send(json.dumps(res)))
+        # except Exception as e:
+        #     logging.error('at %s', 'SIM.handle_sms', exc_info=e)
 
     async def send_sms(self, number, msg):
-        if not self.connected:
-            raise ConnectionError(f'SIM number {self.number} on serial port {self.port} is not connected.')
         await self.listener.send_sms(number, emoji.demojize(msg))
 
     @property
@@ -200,7 +192,7 @@ class Modem(GsmModem):
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory=None):
         self.write('AT+CMGD={0}'.format(index))
-    # Revised method to include memory index on the Sms object for future deletion
+
     def _handleSmsReceived(self, notificationLine):
         if self.smsReceivedCallback is not None:
             cmtiMatch = self.CMTI_REGEX.match(notificationLine)
@@ -210,9 +202,11 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    self.smsReceivedCallback(sms)
+                    asyncio.create_task(self.smsReceivedCallback(sms))
+                    # self.smsReceivedCallback(sms)
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
+                    
     # Revised method to include memory index on the Sms object for future deletion
     def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory=None):
         self._setSmsMemory(readDelete=memory)
