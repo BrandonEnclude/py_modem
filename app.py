@@ -33,10 +33,10 @@ class App:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
-                asyncio.ensure_future(self.poll_modem(self.websocket))
+                asyncio.create_task(self.poll_modem(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
-                    asyncio.ensure_future(self._on_message(msg))
+                    asyncio.create_task(self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
             await self._tear_down(3)
@@ -96,7 +96,7 @@ class App:
     async def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
             try:
-                asyncio.ensure_future(self.sims.send_sms(msg, sim_number, recipient_number))
+                asyncio.create_task(self.sims.send_sms(msg, sim_number, recipient_number))
             except (CmsError, CmeError) as e:
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             except Exception as e:
@@ -107,7 +107,7 @@ class App:
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:
-            asyncio.ensure_future(self.sims.delete_stored_sms(sim_number, msg_index))
+            asyncio.create_task(self.sims.delete_stored_sms(sim_number, msg_index))
 
     async def reconnect(self):
         await self._tear_down(3)
