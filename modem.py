@@ -115,11 +115,10 @@ class SIM:
     async def handle_sms_async(self, sms):
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        print(f'Sending incoming sms to socket: {sms.text}', flush=True)
-        print(self.socket, flush=True)
         await self.socket.send(json.dumps(res))
 
     def handle_sms(self, sms):
+        print(f'Handling SMS: {sms.text}')
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         loop = asyncio.new_event_loop()
