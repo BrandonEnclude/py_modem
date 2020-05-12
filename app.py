@@ -33,7 +33,7 @@ class App:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
-                asyncio.ensure_future(self.poll_modem())
+                asyncio.ensure_future(self.poll_modem(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
                     asyncio.ensure_future(self._on_message(msg))
@@ -44,7 +44,7 @@ class App:
             logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
 
-    async def poll_modem(self):
+    async def poll_modem(self, ws):
         while ws.open and self.stay_connected:
             await asyncio.sleep(5)
             await self.sims.get_stored_messages()
