@@ -141,7 +141,7 @@ class SerialListener(Thread):
         self.BAUDRATE = BAUDRATE
         self.smsTextMode = smsTextMode
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.sms_received_callback)
+        self.modem = Modem(self.port, self.BAUDRATE, self.number, smsReceivedCallbackFunc=self.sms_received_callback)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
@@ -182,7 +182,8 @@ class SerialListener(Thread):
             return -1
 
 class Modem(GsmModem):
-    def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
+    def __init__(self, port, BAUDRATE, number, smsReceivedCallbackFunc):
+        self.number = number
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
 
     # Overrides method due to modem peculiarities
@@ -198,7 +199,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    self.smsReceivedCallback(sms)
+                    self.smsReceivedCallback(sms, self.number)
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
