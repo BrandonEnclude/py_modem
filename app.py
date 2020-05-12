@@ -96,7 +96,7 @@ class App:
     async def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
             try:
-                await self.sims.send_sms(msg, sim_number, recipient_number)
+                asyncio.ensure_future(self.sims.send_sms(msg, sim_number, recipient_number))
             except (CmsError, CmeError) as e:
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             except Exception as e:
@@ -107,7 +107,7 @@ class App:
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:
-            asyncio.create_task(self.sims.delete_stored_sms(sim_number, msg_index))
+            asyncio.ensure_future(self.sims.delete_stored_sms(sim_number, msg_index))
 
     async def reconnect(self):
         await self._tear_down(3)
