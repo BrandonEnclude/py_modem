@@ -128,7 +128,7 @@ class SIM:
         if self.listener is None:
             return False
         try:
-            res = self.listener.modem.write('AT', parseError=False, timeout=0.3)
+            res = self.listener.modem.write('AT', parseError=False, timeout=1)
             return res is not None and 'OK' in res
         except Exception as e:
             logging.error('at %s', 'SIM.connected', exc_info=e)
