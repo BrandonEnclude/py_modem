@@ -120,7 +120,8 @@ class SIM:
         await self.socket.send(json.dumps(res))
 
     def handle_sms(self, sms):
-        self.loop.run_in_executor(None, self.handle_sms, sms)
+        asyncio.create_task(self.handle_sms_async(sms))
+        # self.loop.run_in_executor(None, self.handle_sms, sms)
 
     async def send_sms(self, number, msg):
         await self.listener.send_sms(number, emoji.demojize(msg))
