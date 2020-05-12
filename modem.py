@@ -120,9 +120,7 @@ class SIM:
         await self.socket.send(json.dumps(res))
 
     def handle_sms(self, sms):
-        data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
-        res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        self.loop.run_in_executor(None, self.socket.send(json.dumps(res)))
+        self.loop.run_in_executor(None, self.handle_sms, sms)
 
     async def send_sms(self, number, msg):
         await self.listener.send_sms(number, emoji.demojize(msg))
