@@ -44,7 +44,7 @@ class App:
         # Messages are passed according to the jsonrpc specification https://www.jsonrpc.org/specification
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
-        if method_name is not None:
+        if method_name is not None and getattr(self, method_name) is not None:
             method = getattr(self, method_name)
             await method(**params)
 
