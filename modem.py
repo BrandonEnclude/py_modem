@@ -91,7 +91,7 @@ class SIM:
         if self.listener:
             self.listener.modem.close()
             self.listener = None
-        self.listener = SerialListener(self.number, self.port, self.pin, self.handle_sms_async, asyncio.get_event_loop())
+        self.listener = SerialListener(self.number, self.port, self.pin, self.handle_sms, asyncio.get_event_loop())
     async def get_stored_messages(self):
         storedMessages = await self.listener.list_stored_sms_with_index()
         if storedMessages is not None:
@@ -208,7 +208,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    self.loop.run_in_executor(None, self.loop.start_task(self.smsReceivedCallback(sms)))
+                    self.loop.run_in_executor(None, self.smsReceivedCallback(sms))
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
