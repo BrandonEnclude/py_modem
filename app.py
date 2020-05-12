@@ -1,7 +1,6 @@
 import asyncio
 import websockets, ssl
 from gsmmodem.exceptions import CmsError, CmeError
-from concurrent.futures import ProcessPoolExecutor
 import pathlib
 import json
 import logging
@@ -36,8 +35,7 @@ class App:
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
-                    executor = ProcessPoolExecutor(2)
-                    asyncio.ensure_future(asyncio.get_event_loop().run_in_executor(executor, self._on_message(msg)))
+                    asyncio.ensure_future(self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
             self._tear_down(3)
