@@ -49,7 +49,10 @@ class SIMS:
         await sim.delete_stored_sms(msg_index)
 
     def get(self, number):
-        self.sims.get(number)
+        try:
+            return self.sims[number]
+        except KeyError:
+            return None
 
     def remove(self, number):
         sim = self.sims.get(number)
