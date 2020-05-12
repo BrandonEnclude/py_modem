@@ -189,7 +189,8 @@ class SerialListener(Thread):
             return -1
 
 class Modem(GsmModem):
-    def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc, loop):
+    def __init__(self, port, BAUDRATE, loop, smsReceivedCallbackFunc):
+        self.loop = loop
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
 
     # Overrides method due to modem peculiarities
@@ -205,7 +206,7 @@ class Modem(GsmModem):
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 sms.msgIndex = msgIndex
                 try:
-                    loop.call_soon_threadsafe(self.smsReceivedCallback(sms))
+                    self.loop.call_soon_threadsafe(self.smsReceivedCallback(sms))
                 except Exception as e:
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
