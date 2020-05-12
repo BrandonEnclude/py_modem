@@ -94,16 +94,17 @@ class SIM:
         if storedMessages is not None:
             for sms in storedMessages:
                 if type(sms) is StatusReport:
-                    self.listener.modem.deleteStoredSms(sms.msgIndex, memory='MT')
+                    # self.listener.modem.deleteStoredSms(sms.msgIndex, memory='MT')
+                    asyncio.create_task(asyncio.coroutine(self.listener.modem.deleteStoredSms)(sms.msgIndex, memory='MT')) 
                 else:
                     try:
-                        self.handle_sms(sms)
+                        asyncio.create_task(self.handle_sms(sms))
                     except Exception as e:
                         logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
 
     async def disconnect(self):
         if self.listener is not None:
-            asyncio.get_event_loop().create_task(self.listener.close())
+            asyncio.create_task(self.listener.close())
             del self.listener
             self.listener = None
 
