@@ -47,7 +47,7 @@ class App:
     async def poll_modem(self, ws):
         while ws.open and self.stay_connected:
             await asyncio.sleep(1)
-            await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}
+            await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{})
             # await self.sims.get_stored_messages()
 
     async def _on_message(self, msg):
