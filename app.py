@@ -56,7 +56,7 @@ class App:
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None and getattr(self, method_name) is not None:
             method = getattr(self, method_name)
-            await method(**params)
+            asyncio.create_task(method(**params))
 
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
@@ -80,30 +80,32 @@ class App:
     async def available_sims(self, sims):
         self.sims = SIMS(json.loads(sims), self.websocket)
         try:
-            await self._connect_sims()
-            await self.sim_status()
+            asyncio.create_task(self._connect_sims())
+            asyncio.create_task(self.sim_status())
         except Exception as e:
             logging.error('at %s', 'App.available_sims', exc_info=e)
 
     async def _connect_sims(self):
         if self.sims:
-            await self.sims.connect_all()
+            asyncio.create_task(self.sims.connect_all())
 
     async def sim_status(self, id = None):
         if self.sims:
-            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}}))
+            payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}})
+            asyncio.create_task(self.websocket.send(payload))
 
     async def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
             try:
                 asyncio.create_task(self.sims.send_sms(msg, sim_number, recipient_number))
             except (CmsError, CmeError) as e:
-                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
+                payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}})
             except Exception as e:
                 logging.error('at %s', 'App.send_sms', exc_info=e)
-                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
+                payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}})
             else:
-                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
+                payload = json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}})
+            asyncio.create_task(self.websocket.send(payload))
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:
