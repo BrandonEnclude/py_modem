@@ -101,7 +101,7 @@ class SIM:
                     asyncio.create_task(asyncio.coroutine(self.listener.modem.deleteStoredSms)(sms.msgIndex, memory='MT')) 
                 else:
                     try:
-                        asyncio.create_task(handle_sms_async(sms))
+                        asyncio.create_task(self.handle_sms_async(sms))
                     except Exception as e:
                         logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
 
