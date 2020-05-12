@@ -33,6 +33,7 @@ class App:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
+                asyncio.ensure_future(self.poll_modem())
                 while self.stay_connected:
                     msg = await self.websocket.recv()
                     asyncio.ensure_future(self._on_message(msg))
@@ -42,6 +43,11 @@ class App:
         except Exception as e:
             logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
+
+    async def poll_modem(self):
+        while ws.open and self.stay_connected:
+            await asyncio.sleep(5)
+            await self.sims.get_stored_messages()
 
     async def _on_message(self, msg):
         # Messages are passed according to the jsonrpc specification https://www.jsonrpc.org/specification
@@ -81,7 +87,6 @@ class App:
     async def _connect_sims(self):
         if self.sims:
             await self.sims.connect_all()
-            await self.sims.get_stored_messages()
 
     async def sim_status(self, id = None):
         if self.sims:
