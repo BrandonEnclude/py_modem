@@ -174,7 +174,7 @@ class SerialListener(Thread):
         return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
 
     async def close(self):
-        asyncio.get_event_loop().run_in_executor(None, self.modem.close())
+        asyncio.get_event_loop().run_in_executor(None, self.modem.close)
 
     async def list_stored_sms_with_index(self):
         try:
