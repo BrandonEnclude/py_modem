@@ -36,6 +36,8 @@ class App:
                 while self.stay_connected:
                     msg = await self.websocket.recv()
                     asyncio.create_task(self._on_message(msg))
+        except websockets.exceptions.ConnectionClosed:
+            self._tear_down(3)
         except Exception as e:
             logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
