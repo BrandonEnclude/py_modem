@@ -116,8 +116,9 @@ class SIM:
         data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
         res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
         try:
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.socket.send(json.dumps(res)))
+            # loop = asyncio.get_event_loop()
+            # loop.create_task(self.socket.send(json.dumps(res)))
+            asyncio.create_task(self.socket.send(json.dumps(res)))
         except RuntimeError: #There is no running event loop, so create one
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
