@@ -148,7 +148,7 @@ class SerialListener(Thread):
         self.BAUDRATE = BAUDRATE
         self.smsTextMode = smsTextMode
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.callback, loop)
+        self.modem = Modem(self.port, self.BAUDRATE, loop, smsReceivedCallbackFunc=self.callback)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
