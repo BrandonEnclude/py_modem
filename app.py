@@ -33,7 +33,7 @@ class App:
             async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
-                asyncio.create_task(self.poll_modem(self.websocket))
+                asyncio.ensure_future(self.poll_modem(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
                     asyncio.create_task(self._on_message(msg))
