@@ -172,7 +172,7 @@ class SerialListener(Thread):
             self.modem.close()
     
     def start_queue_worker(self):
-        asyncio.create_task(self.queue_worker(self.queue)
+        asyncio.create_task(self.queue_worker(self.queue))
 
     async def queue_worker(self, queue):
         print('Starting queue worker...'. flush=True)
