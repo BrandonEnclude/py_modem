@@ -102,7 +102,8 @@ class App:
                     pool,
                     self.sims.send_sms(msg, sim_number, recipient_number)
                 )
-                print('custom thread pool', result)
+                print('custom thread pool', flush=True)
+                print(result, flush=True)
             # try:
             #     await self.sims.send_sms(msg, sim_number, recipient_number)
             # except (CmsError, CmeError) as e:
