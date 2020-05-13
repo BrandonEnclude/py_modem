@@ -104,18 +104,18 @@ class App:
         if self.sims:
             await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}}))
 
-    async def send_sms(self, msgId, msg, sim_number, recipient_number):
+    def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
 
             try:
-                await self.sims.send_sms(msg, sim_number, recipient_number)
-            except (CmsError, CmeError) as e:
-                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
-            except Exception as e:
-                logging.error('at %s', 'App.send_sms', exc_info=e)
-                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
-            else:
-                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
+                self.sims.send_sms(msg, sim_number, recipient_number)
+            # except (CmsError, CmeError) as e:
+            #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
+            # except Exception as e:
+            #     logging.error('at %s', 'App.send_sms', exc_info=e)
+            #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
+            # else:
+            #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
 
     async def sent_sms_status(self, status):
         if self.sims:
