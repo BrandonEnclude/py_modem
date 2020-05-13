@@ -151,7 +151,7 @@ class SerialListener(Thread):
         self.BAUDRATE = BAUDRATE
         self.smsTextMode = smsTextMode
         self.loop = asyncio.get_event_loop()
-        queue = asyncio.Queue(loop=self.loop)
+        self.queue = asyncio.Queue(loop=self.loop)
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
         self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.callback)
         try:
