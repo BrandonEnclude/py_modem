@@ -175,7 +175,7 @@ class SerialListener(Thread):
         asyncio.create_task(self.queue_worker())
 
     async def queue_worker(self):
-        print('Starting queue worker...'. flush=True)
+        print('Starting queue worker...', flush=True)
         while True:
             await self.queue.get()
             print('Found a task!', flush=True)
