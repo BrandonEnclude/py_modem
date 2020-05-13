@@ -40,8 +40,7 @@ class App:
                     loop = asyncio.get_running_loop()
                     # 2. Run in a custom thread pool:
                     with concurrent.futures.ThreadPoolExecutor() as pool:
-                        loop.run_in_executor(
-                            pool, self._on_message, msg
+                        loop.run_in_executor(pool, self._on_message, msg)
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
             await self._tear_down(3)
