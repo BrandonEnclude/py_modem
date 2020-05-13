@@ -37,7 +37,11 @@ class App:
                 asyncio.create_task(self.poll_modem(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
-                    asyncio.create_task(self._on_message(msg))
+                    loop = asyncio.get_running_loop()
+                    # 2. Run in a custom thread pool:
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        loop.run_in_executor(
+                            pool, self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
             await self._tear_down(3)
@@ -48,26 +52,16 @@ class App:
     async def poll_modem(self, ws):
         while ws.open and self.stay_connected:
             await asyncio.sleep(1)
-            await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
+            # await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
             # await self.sims.get_stored_messages()
 
-    async def _on_message(self, msg):
+    def _on_message(self, msg):
         # Messages are passed according to the jsonrpc specification https://www.jsonrpc.org/specification
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None and getattr(self, method_name) is not None:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-
-                method = getattr(self, method_name)
-                
-                result = await loop.run_in_executor(
-                    pool,
-                    await method(**params)
-                )
-                print('custom thread pool', flush=True)
-                print(result, flush=True)
-            
+            method = getattr(self, method_name)
+            method(**params)
 
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
@@ -106,11 +100,10 @@ class App:
 
     def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
-
             try:
                 self.sims.send_sms(msg, sim_number, recipient_number)
-            except Exception as e:
-                print(repr(e))
+            except:
+                pass
             # except (CmsError, CmeError) as e:
             #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             # except Exception as e:
@@ -118,10 +111,6 @@ class App:
             #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             # else:
             #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
-
-    async def sent_sms_status(self, status):
-        if self.sims:
-            await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'{status}'}}))
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:
