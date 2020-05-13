@@ -177,7 +177,7 @@ class SerialListener(Thread):
     async def queue_worker(self, queue):
         print('Starting queue worker...', flush=True)
         while True:
-            await item = queue.get()
+            item = await queue.get()
             func = items[0]
             args = items[1:]
             func(*args)
