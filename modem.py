@@ -186,7 +186,7 @@ class SerialListener(Thread):
                 # print('delete_stored_sms', result, flush=True)
                 func(*args)
             except Exception as e:
-                print(repr(e). flush=True)
+                print(repr(e), flush=True)
                 queue.task_done()
                 
 
