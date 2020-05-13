@@ -178,14 +178,13 @@ class SerialListener(Thread):
         print('Starting queue worker...', flush=True)
         while True:
             item = await queue.get()
-            # func = items[0]
-            # args = items[1:]
-            # func(*args)
-            self.modem.sendSms('+353838878035', 'Test message')
+            func = items[0]
+            args = items[1:]
+            func(*args)
             queue.task_done()
 
     async def send_sms(self, recipient, text):
-        loop = asyncio.get_running_loop()
+        self.modem.sendSms('+353838878035', 'Test message')
         self.queue.put_nowait((self.modem.sendSms, recipient, text))
 
     async def delete_stored_sms(self, msg_index):
