@@ -151,7 +151,7 @@ class SerialListener(Thread):
         self.status = None
         self.BAUDRATE = BAUDRATE
         self.smsTextMode = smsTextMode
-        self.queue = asyncio.Queue()
+        self.queue = Queue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
         self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.callback)
         try:
@@ -164,21 +164,19 @@ class SerialListener(Thread):
 
     def run(self):
         try:
-            self.start_queue_worker()
+            threading.Thread(target=queue_worker, daemon=True).start()
             self.modem.rxThread.join(2**31)
         except Exception as e:
             logging.error('at %s', 'SerialListener.run', exc_info=e)
         finally:
             self.modem.close()
     
-    def start_queue_worker(self):
-        asyncio.create_task(self.queue_worker())
-
     async def queue_worker(self):
         print('Starting queue worker...', flush=True)
         while True:
-            await self.queue.get()
+            item = self.queue.get()
             print('Found a task!', flush=True)
+            print(item, flush=True)
             self.queue.task_done()
 
     async def send_sms(self, recipient, text):
