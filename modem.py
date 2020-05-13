@@ -5,6 +5,7 @@ from gsmmodem.exceptions import TimeoutException
 from threading import Thread
 import logging
 import asyncio
+import concurrent.futures
 import json
 import re
 import serial
@@ -168,27 +169,40 @@ class SerialListener(Thread):
             self.modem.close()
 
     async def send_sms(self, recipient, text):
-        import concurrent.futures
         loop = asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor() as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             result = await loop.run_in_executor(
                 pool, self.modem.sendSms, recipient, text)
-            print('custom thread pool', result)
-
-
+            print('send_sms', result, flush=True)
         # return await asyncio.coroutine(self.modem.sendSms)(recipient, text)
 
     async def delete_stored_sms(self, msg_index):
-        return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            result = await loop.run_in_executor(
+                pool, self.modem.deleteStoredSms, msg_index)
+            print('delete_stored_sms', result, flush=True)
+        # return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
 
     async def close(self):
-        asyncio.get_event_loop().run_in_executor(None, self.modem.close)
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            result = await loop.run_in_executor(
+                pool, self.modem.close)
+            print('modem.close', result, flush=True)
+        # return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
+        # asyncio.get_event_loop().run_in_executor(None, self.modem.close)
 
     async def list_stored_sms_with_index(self):
-        try:
-            return await asyncio.coroutine(self.modem.listStoredSmsWithIndex)(memory='MT')
-        except Exception as e:
-            logging.error('at %s', 'SerialListener.list_stored_sms_with_index', exc_info=e)
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            result = await loop.run_in_executor(
+                pool, self.modem.listStoredSmsWithIndex, memory='MT')
+            print('list_stored_sms', result, flush=True)
+        # try:
+        #     return await asyncio.coroutine(self.modem.listStoredSmsWithIndex)(memory='MT')
+        # except Exception as e:
+        #     logging.error('at %s', 'SerialListener.list_stored_sms_with_index', exc_info=e)
 
     @property
     def signal_strength(self):
