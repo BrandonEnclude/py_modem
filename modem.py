@@ -181,7 +181,7 @@ class SerialListener(Thread):
 
     async def send_sms(self, recipient, text):
         loop = asyncio.get_running_loop()
-        self.queue.put_nowait(pool, lambda: self.modem.sendSms(recipient, text))
+        self.queue.put_nowait(lambda: self.modem.sendSms(recipient, text))
 
     async def delete_stored_sms(self, msg_index):
         loop = asyncio.get_running_loop()
