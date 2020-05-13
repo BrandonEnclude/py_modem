@@ -1,5 +1,4 @@
 import asyncio
-import concurrent.futures
 import websockets, ssl
 from gsmmodem.exceptions import CmsError, CmeError
 import pathlib
@@ -37,10 +36,7 @@ class App:
                 asyncio.create_task(self.poll_modem(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
-                    loop = asyncio.get_running_loop()
-                    # 2. Run in a custom thread pool:
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
-                        loop.run_in_executor(pool, self._on_message, msg)
+                    asyncio.create_task(self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
             await self._tear_down(3)
@@ -54,13 +50,13 @@ class App:
             # await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
             # await self.sims.get_stored_messages()
 
-    def _on_message(self, msg):
+    async def _on_message(self, msg):
         # Messages are passed according to the jsonrpc specification https://www.jsonrpc.org/specification
         jsonrpc = json.loads(msg)
         namespace, method_name, params = self._extract_params(jsonrpc)
         if method_name is not None and getattr(self, method_name) is not None:
             method = getattr(self, method_name)
-            method(**params)
+            await method(**params)
 
     async def _tear_down(self, delay = RECONNECT_DELAY):
         try:
@@ -97,19 +93,17 @@ class App:
         if self.sims:
             await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.broadcast_sim_status','params':{'sims': self.sims.to_dict()}}))
 
-    def send_sms(self, msgId, msg, sim_number, recipient_number):
+    async def send_sms(self, msgId, msg, sim_number, recipient_number):
         if self.sims:
             try:
-                self.sims.send_sms(msg, sim_number, recipient_number)
-            except:
-                pass
-            # except (CmsError, CmeError) as e:
-            #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
-            # except Exception as e:
-            #     logging.error('at %s', 'App.send_sms', exc_info=e)
-            #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
-            # else:
-            #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
+                await self.sims.send_sms(msg, sim_number, recipient_number)
+            except (CmsError, CmeError) as e:
+                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
+            except Exception as e:
+                logging.error('at %s', 'App.send_sms', exc_info=e)
+                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
+            else:
+                await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': 'Sent'}}))
 
     async def delete_stored_sms(self, sim_number, msg_index):
         if self.sims:

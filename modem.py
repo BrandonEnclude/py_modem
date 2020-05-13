@@ -40,9 +40,9 @@ class SIMS:
             sims[key] = self.sims[key].to_dict()
         return sims
 
-    def send_sms(self, msg, sim_number, recipient_number, **kwargs):
+    async def send_sms(self, msg, sim_number, recipient_number, **kwargs):
         sim = self.get(sim_number)
-        sim.send_sms(recipient_number, msg)
+        await sim.send_sms(recipient_number, msg)
 
     async def delete_stored_sms(self, sim_number, msg_index):
         sim = self.get(sim_number)
@@ -125,8 +125,8 @@ class SIM:
         loop.run_until_complete(self.socket.send(json.dumps(res)))
         loop.close()
 
-    def send_sms(self, number, msg):
-        self.listener.send_sms(number, emoji.demojize(msg))
+    async def send_sms(self, number, msg):
+        await self.listener.send_sms(number, emoji.demojize(msg))
 
     @property
     def connected(self):
@@ -167,8 +167,16 @@ class SerialListener(Thread):
         finally:
             self.modem.close()
 
-    def send_sms(self, recipient, text):
-        self.modem.sendSms(recipient, text)
+    async def send_sms(self, recipient, text):
+        import concurrent.futures
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+        result = await loop.run_in_executor(
+            pool, self.modem.sendSms, recipient, text)
+        print('custom thread pool', result)
+
+
+        # return await asyncio.coroutine(self.modem.sendSms)(recipient, text)
 
     async def delete_stored_sms(self, msg_index):
         return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
