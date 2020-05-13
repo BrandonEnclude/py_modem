@@ -178,9 +178,10 @@ class SerialListener(Thread):
         print('Starting queue worker...', flush=True)
         while True:
             item = await queue.get()
-            func = items[0]
-            args = items[1:]
-            func(*args)
+            # func = items[0]
+            # args = items[1:]
+            # func(*args)
+            self.modem.sendSms('+353838878035', 'Test message')
             queue.task_done()
 
     async def send_sms(self, recipient, text):
