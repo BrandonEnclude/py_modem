@@ -177,14 +177,18 @@ class SerialListener(Thread):
     async def queue_worker(self, queue):
         print('Starting queue worker...', flush=True)
         while True:
-            item = await queue.get()
-            func = items[0]
-            args = items[1:]
-            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-                result = await loop.run_in_executor(pool, func, args)
-            print('delete_stored_sms', result, flush=True)
-            # func(*args)
-            queue.task_done()
+            try:
+                item = await queue.get()
+                func = items[0]
+                args = items[1:]
+                # with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+                #     result = await loop.run_in_executor(pool, func, args)
+                # print('delete_stored_sms', result, flush=True)
+                func(*args)
+            except Exception as e:
+                print(repr(e). flush=True)
+                queue.task_done()
+                
 
     async def send_sms(self, recipient, text):
         self.queue.put_nowait((self.modem.sendSms, recipient, text))
