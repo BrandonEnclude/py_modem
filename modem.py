@@ -171,9 +171,9 @@ class SerialListener(Thread):
         import concurrent.futures
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
-        result = await loop.run_in_executor(
-            pool, self.modem.sendSms, recipient, text)
-        print('custom thread pool', result)
+            result = await loop.run_in_executor(
+                pool, self.modem.sendSms, recipient, text)
+            print('custom thread pool', result)
 
 
         # return await asyncio.coroutine(self.modem.sendSms)(recipient, text)
