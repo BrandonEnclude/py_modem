@@ -40,9 +40,9 @@ class SIMS:
             sims[key] = self.sims[key].to_dict()
         return sims
 
-    async def send_sms(self, msg, sim_number, recipient_number, **kwargs):
+    def send_sms(self, msg, sim_number, recipient_number, **kwargs):
         sim = self.get(sim_number)
-        await sim.send_sms(recipient_number, msg)
+        sim.send_sms(recipient_number, msg)
 
     async def delete_stored_sms(self, sim_number, msg_index):
         sim = self.get(sim_number)
@@ -125,8 +125,8 @@ class SIM:
         loop.run_until_complete(self.socket.send(json.dumps(res)))
         loop.close()
 
-    async def send_sms(self, number, msg):
-        await self.listener.send_sms(number, emoji.demojize(msg))
+    def send_sms(self, number, msg):
+        self.listener.send_sms(number, emoji.demojize(msg))
 
     @property
     def connected(self):
@@ -167,8 +167,8 @@ class SerialListener(Thread):
         finally:
             self.modem.close()
 
-    async def send_sms(self, recipient, text):
-        return await asyncio.coroutine(self.modem.sendSms)(recipient, text)
+    def send_sms(self, recipient, text):
+        self.modem.sendSms(recipient, text)
 
     async def delete_stored_sms(self, msg_index):
         return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
