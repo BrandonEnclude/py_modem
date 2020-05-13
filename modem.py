@@ -177,13 +177,15 @@ class SerialListener(Thread):
     async def queue_worker(self, queue):
         print('Starting queue worker...', flush=True)
         while True:
-            await queue.get()
-            raise Exception('Found a task!')
+            await item = queue.get()
+            func = items[0]
+            args = items[1:]
+            func(*args)
             queue.task_done()
 
     async def send_sms(self, recipient, text):
         loop = asyncio.get_running_loop()
-        self.queue.put_nowait(lambda: self.modem.sendSms(recipient, text))
+        self.queue.put_nowait((self.modem.sendSms, recipient, text))
 
     async def delete_stored_sms(self, msg_index):
         loop = asyncio.get_running_loop()
