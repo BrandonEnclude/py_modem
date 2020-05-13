@@ -180,11 +180,13 @@ class SerialListener(Thread):
             item = await queue.get()
             func = items[0]
             args = items[1:]
-            func(*args)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+                result = await loop.run_in_executor(pool, func, args)
+            print('delete_stored_sms', result, flush=True)
+            # func(*args)
             queue.task_done()
 
     async def send_sms(self, recipient, text):
-        self.modem.sendSms('+353838878035', 'Test message')
         self.queue.put_nowait((self.modem.sendSms, recipient, text))
 
     async def delete_stored_sms(self, msg_index):
