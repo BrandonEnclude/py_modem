@@ -109,6 +109,8 @@ class App:
 
             try:
                 self.sims.send_sms(msg, sim_number, recipient_number)
+            except Exception as e:
+                print(repr(e))
             # except (CmsError, CmeError) as e:
             #     await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': msgId, 'message': f'ERR: {repr(e)}'}}))
             # except Exception as e:
