@@ -3,14 +3,14 @@ from gsmmodem.modem import GsmModem, StatusReport, Sms, ReceivedSms
 from gsmmodem.pdu import decodeSmsPdu
 from gsmmodem.exceptions import TimeoutException
 from threading import Thread
-from queue import Queue
+from queue_task import DeleteSMSQueueTask, GetStoredSMSQueueTask, HandleIncomingSMSQueueTask, SendSMSQueueTask, PauseQueueTask
+import time
 import logging
 import asyncio
 import concurrent.futures
 import json
 import re
 import serial
-import emoji
 
 logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
 
@@ -42,9 +42,9 @@ class SIMS:
             sims[key] = self.sims[key].to_dict()
         return sims
 
-    async def send_sms(self, msg, sim_number, recipient_number, **kwargs):
+    async def send_sms(self, msgId, msg, sim_number, recipient_number, **kwargs):
         sim = self.get(sim_number)
-        await sim.send_sms(recipient_number, msg)
+        await sim.send_sms(msgId, recipient_number, msg)
 
     async def delete_stored_sms(self, sim_number, msg_index):
         sim = self.get(sim_number)
@@ -94,19 +94,11 @@ class SIM:
         if self.listener:
             self.listener.modem.close()
             self.listener = None
-        self.listener = SerialListener(self.number, self.port, self.pin, self.handle_sms)
+        self.listener = SerialListener(self.number, self.port, self.pin, self.socket)
+        
     async def get_stored_messages(self):
-        storedMessages = await self.listener.list_stored_sms_with_index()
-        if storedMessages is not None:
-            for sms in storedMessages:
-                if type(sms) is StatusReport:
-                    # self.listener.modem.deleteStoredSms(sms.msgIndex, memory='MT')
-                    asyncio.create_task(asyncio.coroutine(self.listener.modem.deleteStoredSms)(sms.msgIndex, memory='MT')) 
-                else:
-                    try:
-                        asyncio.create_task(self.handle_sms_async(sms))
-                    except Exception as e:
-                        logging.error('at %s', 'SIM.get_stored_messages', exc_info=e)
+        if self.listener:
+            await self.listener.get_stored_messages()
 
     async def disconnect(self):
         if self.listener is not None:
@@ -114,21 +106,8 @@ class SIM:
             del self.listener
             self.listener = None
 
-    async def handle_sms_async(self, sms):
-        data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
-        res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        await self.socket.send(json.dumps(res))
-
-    def handle_sms(self, sms):
-        print(f'Handling SMS: {sms.text}')
-        data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
-        res = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(self.socket.send(json.dumps(res)))
-        loop.close()
-
-    async def send_sms(self, number, msg):
-        await self.listener.send_sms(number, emoji.demojize(msg))
+    async def send_sms(self, msgId, number, msg):
+        await self.listener.send_sms(msgId, number, msg)
 
     @property
     def connected(self):
@@ -142,18 +121,18 @@ class SIM:
             return False
 
 class SerialListener(Thread):
-    def __init__(self, number, port, pin, callback, BAUDRATE = 115200, smsTextMode = False):
+    def __init__(self, number, port, pin, socket, BAUDRATE = 115200, smsTextMode = False):
         Thread.__init__(self)
         self.number = number
         self.port = port
         self.pin = pin
-        self.callback = callback
+        self.socket = socket
         self.status = None
         self.BAUDRATE = BAUDRATE
         self.smsTextMode = smsTextMode
-        self.queue = asyncio.Queue()
+        self.queue = asyncio.PriorityQueue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.callback)
+        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.handle_sms)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
@@ -161,65 +140,78 @@ class SerialListener(Thread):
         except Exception as e:
             logging.error('at %s', 'SerialListener.__init__', exc_info=e)
             self.status = repr(e)
+        else:
+            asyncio.create_task(self.queue_worker(self.queue))
+            # asyncio.create_task(self.pause_for_incoming(self.socket))
 
     def run(self):
         try:
-            self.start_queue_worker()
             self.modem.rxThread.join(2**31)
         except Exception as e:
             logging.error('at %s', 'SerialListener.run', exc_info=e)
         finally:
             self.modem.close()
     
-    def start_queue_worker(self):
-        asyncio.create_task(self.queue_worker(self.queue))
-
     async def queue_worker(self, queue):
-        print('Starting queue worker...', flush=True)
+        loop = asyncio.get_event_loop()
+        tasks_since_pause = 0
         while True:
-            try:
-                item = await queue.get()
-                func = items[0]
-                args = items[1:]
-                # with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-                #     result = await loop.run_in_executor(pool, func, args)
-                # print('delete_stored_sms', result, flush=True)
-                func(*args)
-            except Exception as e:
-                print(repr(e), flush=True)
-                queue.task_done()
-                
+            task = await queue.get()
+            await asyncio.sleep(task.sleep)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+                try:
+                    await loop.run_in_executor(pool, task.run)
+                except Exception as e:
+                    logging.error('at %s', 'SerialListener.queue_worker', exc_info=e)
+                for payload in task.payload_responses:
+                    await self.socket.send(json.dumps(payload))
+                for task in task.spawned_tasks:
+                    self.queue.put_nowait(task)
 
-    async def send_sms(self, recipient, text):
-        self.queue.put_nowait((self.modem.sendSms, recipient, text))
+            if queue.qsize() == 0 and tasks_since_pause > 1:
+                tasks_since_pause = 0
+                await self.queue_pause()
+            elif tasks_since_pause >= 10:
+                tasks_since_pause = 0
+                await self.queue_pause()
+            else:
+                tasks_since_pause += 1
+
+            queue.task_done()
+
+    async def pause_for_incoming(self, socket):
+        while socket.open:
+            task_in_queue = False
+            for item in self.queue._queue:
+                if isinstance(item, PauseQueueTask):
+                    task_in_queue = True
+                    break
+            if not task_in_queue:
+                await self.queue_pause()
+            await asyncio.sleep(30)
+
+    async def send_sms(self, msgId, recipient, text):
+        task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)
+        self.queue.put_nowait(task)
 
     async def delete_stored_sms(self, msg_index):
-        loop = asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            result = await loop.run_in_executor(
-                pool, self.modem.deleteStoredSms, msg_index)
-            print('delete_stored_sms', result, flush=True)
-        # return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
+        task = DeleteSMSQueueTask(self.modem, self.number, msg_index, priority=2)
+        self.queue.put_nowait(task)
 
     async def close(self):
-        loop = asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            result = await loop.run_in_executor(
-                pool, self.modem.close)
-            print('modem.close', result, flush=True)
-        # return await asyncio.coroutine(self.modem.deleteStoredSms)(msg_index)
-        # asyncio.get_event_loop().run_in_executor(None, self.modem.close)
+        return await asyncio.coroutine(self.modem.close)()
 
-    async def list_stored_sms_with_index(self):
-        loop = asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            result = await loop.run_in_executor(
-                pool, self.modem.listStoredSmsWithIndex, memory='MT')
-            print('list_stored_sms', result, flush=True)
-        # try:
-        #     return await asyncio.coroutine(self.modem.listStoredSmsWithIndex)(memory='MT')
-        # except Exception as e:
-        #     logging.error('at %s', 'SerialListener.list_stored_sms_with_index', exc_info=e)
+    async def get_stored_messages(self):
+        task = GetStoredSMSQueueTask(self.modem, self.number, priority=1)
+        self.queue.put_nowait(task)
+
+    def handle_sms(self, sms):
+        task = HandleIncomingSMSQueueTask(self.modem, self.number, sms, priority=3)
+        self.queue.put_nowait(task)
+
+    async def queue_pause(self):
+        task = PauseQueueTask(self.modem, self.number, priority=0)
+        self.queue.put_nowait(task)
 
     @property
     def signal_strength(self):
@@ -251,7 +243,7 @@ class Modem(GsmModem):
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
     # Revised method to include memory index on the Sms object for future deletion
-    def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory=None):
+    def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory='MT'):
         self._setSmsMemory(readDelete=memory)
         messages = []
         cmglRegex = re.compile(r'^\+CMGL:\s*(\d+),\s*(\d+),.*$')
