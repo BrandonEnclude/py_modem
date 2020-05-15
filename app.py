@@ -11,9 +11,7 @@ import sys
 logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
 
 URI = os.environ.get('WEBSOCKET_URI', 'wss://sms.enclude.ie/ws/')
-WS_KEY = os.environ.get('WS_KEY', 'cddfdccc-8af5-11ea-bc55-0242ac130003')
-# URI = os.environ.get('WEBSOCKET_URI', 'ws://127.0.0.1:8000/ws/')
-# WS_KEY = os.environ.get('WS_KEY', 'ws_key')
+WS_KEY = os.environ.get('WS_KEY', 'ws_key')
 RECONNECT_DELAY = int(os.environ.get('RECONNECT_DELAY', 3))
 
 ssl_context = ssl.SSLContext()
