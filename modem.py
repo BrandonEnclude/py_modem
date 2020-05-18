@@ -142,7 +142,6 @@ class SerialListener(Thread):
             self.status = repr(e)
         else:
             asyncio.create_task(self.queue_worker(self.queue))
-            # asyncio.create_task(self.pause_for_incoming(self.socket))
 
     def run(self):
         try:
@@ -168,27 +167,22 @@ class SerialListener(Thread):
                 for task in task.spawned_tasks:
                     self.queue.put_nowait(task)
 
-            if queue.qsize() == 0 and tasks_since_pause > 1:
+            if (queue.qsize() == 0 and tasks_since_pause > 1) or (tasks_since_pause >= 10):
                 tasks_since_pause = 0
-                await self.queue_pause()
-            elif tasks_since_pause >= 10:
-                tasks_since_pause = 0
-                await self.queue_pause()
+                await self.pause_for_incoming()
             else:
                 tasks_since_pause += 1
 
             queue.task_done()
 
     async def pause_for_incoming(self, socket):
-        while socket.open:
-            task_in_queue = False
-            for item in self.queue._queue:
-                if isinstance(item, PauseQueueTask):
-                    task_in_queue = True
-                    break
-            if not task_in_queue:
-                await self.queue_pause()
-            await asyncio.sleep(30)
+        task_in_queue = False
+        for item in self.queue._queue:
+            if isinstance(item, PauseQueueTask):
+                task_in_queue = True
+                break
+        if not task_in_queue:
+            await self.queue_pause()
 
     async def send_sms(self, msgId, recipient, text):
         task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)

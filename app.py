@@ -29,11 +29,10 @@ class App:
 
     async def listen(self):
         try:
-            async with websockets.connect(self.URI, extra_headers=headers) as websocket:
-            # async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
+            # async with websockets.connect(self.URI, extra_headers=headers) as websocket:
+            async with websockets.connect(self.URI, ssl = ssl_context, extra_headers=headers) as websocket:
                 self.websocket = websocket
                 await self.websocket.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.reconnect_done','params':{'status': 'Ok'}}))
-                # asyncio.create_task(self.check_incoming(self.websocket))
                 while self.stay_connected:
                     msg = await self.websocket.recv()
                     asyncio.create_task(self._on_message(msg))
@@ -43,12 +42,6 @@ class App:
         except Exception as e:
             logging.error('at %s', 'App.listen', exc_info=e)
             await self._tear_down()
-
-    async def check_incoming(self, ws):
-        while ws.open and self.stay_connected:
-            await asyncio.sleep(20)
-            await self.sims.get_stored_messages()
-            # await ws.send(json.dumps({'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.ping','params':{}}))
 
     async def _on_message(self, msg):
         # Messages are passed according to the jsonrpc specification https://www.jsonrpc.org/specification
