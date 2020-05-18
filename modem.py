@@ -167,9 +167,14 @@ class SerialListener(Thread):
                 for task in task.spawned_tasks:
                     self.queue.put_nowait(task)
 
-            if (queue.qsize() == 0 and tasks_since_pause > 0) or (tasks_since_pause >= 20):
+            if tasks_since_pause >= 20:
                 tasks_since_pause = 0
                 await self.pause_for_incoming()
+
+            elif queue.qsize() == 0 and tasks_since_pause > 0:
+                tasks_since_pause = 0
+                await self.get_stored_messages()
+
             elif isinstance(task, SendSMSQueueTask):
                 tasks_since_pause += 1
 
