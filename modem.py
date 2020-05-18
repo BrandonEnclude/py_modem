@@ -175,7 +175,7 @@ class SerialListener(Thread):
 
             queue.task_done()
 
-    async def pause_for_incoming(self, socket):
+    async def pause_for_incoming(self):
         task_in_queue = False
         for item in self.queue._queue:
             if isinstance(item, PauseQueueTask):
