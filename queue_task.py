@@ -75,7 +75,7 @@ class SendSMSQueueTask(QueueTask):
 class PauseQueueTask(QueueTask):
     def __init__(self, modem, number, **kwargs):
         QueueTask.__init__(self, modem, number, **kwargs)
-        self.sleep = 5
+        self.sleep = 7
 
     def run(self):
         self.spawned_tasks.append(GetStoredSMSQueueTask(self.modem, self.number, priority=1))
