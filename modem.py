@@ -171,8 +171,7 @@ class SerialListener(Thread):
             #     tasks_since_pause = 0
             #     await self.pause_for_incoming()
 
-            elif queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
-                tasks_since_pause = 0
+            if queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
                 await self.get_stored_messages()
 
             # elif isinstance(task, SendSMSQueueTask):
