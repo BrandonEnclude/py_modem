@@ -34,9 +34,8 @@ class GetStoredSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
+        time.sleep(3)
         try:
-            storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
-        except:
             storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
         if storedMessages is not None:
             for sms in storedMessages:
@@ -84,6 +83,5 @@ class PauseQueueTask(QueueTask):
         self.sleep = 5
 
     def run(self):
-        time.sleep(30)
         # self.spawned_tasks.append(GetStoredSMSQueueTask(self.modem, self.number, priority=0))
         pass
