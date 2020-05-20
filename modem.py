@@ -167,15 +167,16 @@ class SerialListener(Thread):
                 for task in task.spawned_tasks:
                     self.queue.put_nowait(task)
 
-            # if tasks_since_pause >= 5:
-            #     tasks_since_pause = 0
-            #     await self.queue_pause()
+            if tasks_since_pause >= 5:
+                tasks_since_pause = 0
+                await self.queue_pause()
 
-            # if queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
-            #     await self.queue_pause()
+            if queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
+                tasks_since_pause = 0
+                # await self.queue_pause()
 
-            # elif isinstance(task, SendSMSQueueTask):
-            #     tasks_since_pause += 1
+            elif isinstance(task, SendSMSQueueTask):
+                tasks_since_pause += 1
 
             queue.task_done()
 
@@ -221,7 +222,7 @@ class SerialListener(Thread):
 
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
-        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
+        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc, AT_CNMI='3,1,0,2')
 
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory=None):
