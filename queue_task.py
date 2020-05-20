@@ -52,7 +52,7 @@ class HandleIncomingSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
-        if type(sms) is StatusReport:
+        if type(self.sms) is StatusReport:
             print('Received Status Report', flush=True)
             self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
         else:
