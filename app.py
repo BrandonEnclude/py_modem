@@ -40,7 +40,7 @@ class App:
             print('Websocked closed unexpectedly.', flush=True)
             await self._tear_down(3)
         except Exception as e:
-            logging.error('at %s', 'App.listen', exc_info=e)
+            print('Websocked closed unexpectedly.' + repr(e), flush=True)
             await self._tear_down()
 
     async def _on_message(self, msg):
