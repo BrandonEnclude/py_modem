@@ -221,24 +221,24 @@ class SerialListener(Thread):
 
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
-        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc, AT_CNMI='2,1,0,2') #AT_CNMI='3,1,0,0' ?
+        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc, AT_CNMI='3,1,0,2') #AT_CNMI='3,1,0,0' ?
 
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory=None):
         self.write('AT+CMGD={0}'.format(index))
 
-    # def _handleSmsReceived(self, notificationLine):
-    #     if self.smsReceivedCallback is not None:
-    #         cmtiMatch = self.CMTI_REGEX.match(notificationLine)
-    #         if cmtiMatch:
-    #             msgMemory = cmtiMatch.group(1)
-    #             msgIndex = cmtiMatch.group(2)
-    #             sms = self.readStoredSms(msgIndex, msgMemory)
-    #             sms.msgIndex = msgIndex
-    #             try:
-    #                 self.smsReceivedCallback(sms)
-    #             except Exception as e:
-    #                 logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
+    def _handleSmsReceived(self, notificationLine):
+        if self.smsReceivedCallback is not None:
+            cmtiMatch = self.CMTI_REGEX.match(notificationLine)
+            if cmtiMatch:
+                msgMemory = cmtiMatch.group(1)
+                msgIndex = cmtiMatch.group(2)
+                sms = self.readStoredSms(msgIndex, msgMemory)
+                sms.msgIndex = msgIndex
+                try:
+                    self.smsReceivedCallback(sms)
+                except Exception as e:
+                    logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
     # Revised method to include memory index on the Sms object for future deletion
     def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory='MT'):
