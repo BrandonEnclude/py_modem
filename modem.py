@@ -167,7 +167,7 @@ class SerialListener(Thread):
                 for task in task.spawned_tasks:
                     self.queue.put_nowait(task)
 
-            if tasks_since_pause >= 20:
+            if tasks_since_pause >= 5:
                 tasks_since_pause = 0
                 await self.pause_for_incoming()
 
