@@ -8,7 +8,7 @@ class QueueTask:
         self.payload_responses = []
         self.spawned_tasks = []
         self.priority = priority
-        self.sleep = 1.5
+        self.sleep = .5
 
     def __lt__(self, other):
         return self.priority < other.priority
