@@ -85,5 +85,5 @@ class PauseQueueTask(QueueTask):
         self.sleep = 5
 
     def run(self):
-        # self.spawned_tasks.append(GetStoredSMSQueueTask(self.modem, self.number, priority=0))
+        self.spawned_tasks.append(GetStoredSMSQueueTask(self.modem, self.number, priority=0))
         pass
