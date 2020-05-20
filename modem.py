@@ -227,18 +227,18 @@ class Modem(GsmModem):
     def deleteStoredSms(self, index, memory=None):
         self.write('AT+CMGD={0}'.format(index))
 
-    def _handleSmsReceived(self, notificationLine):
-        if self.smsReceivedCallback is not None:
-            cmtiMatch = self.CMTI_REGEX.match(notificationLine)
-            if cmtiMatch:
-                msgMemory = cmtiMatch.group(1)
-                msgIndex = cmtiMatch.group(2)
-                sms = self.readStoredSms(msgIndex, msgMemory)
-                sms.msgIndex = msgIndex
-                try:
-                    self.smsReceivedCallback(sms)
-                except Exception as e:
-                    logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
+    # def _handleSmsReceived(self, notificationLine):
+    #     if self.smsReceivedCallback is not None:
+    #         cmtiMatch = self.CMTI_REGEX.match(notificationLine)
+    #         if cmtiMatch:
+    #             msgMemory = cmtiMatch.group(1)
+    #             msgIndex = cmtiMatch.group(2)
+    #             sms = self.readStoredSms(msgIndex, msgMemory)
+    #             sms.msgIndex = msgIndex
+    #             try:
+    #                 self.smsReceivedCallback(sms)
+    #             except Exception as e:
+    #                 logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
     # Revised method to include memory index on the Sms object for future deletion
     def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory='MT'):
