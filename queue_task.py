@@ -8,7 +8,7 @@ class QueueTask:
         self.payload_responses = []
         self.spawned_tasks = []
         self.priority = priority
-        self.sleep = 0
+        self.sleep = 1
 
     def __lt__(self, other):
         return self.priority < other.priority
@@ -75,7 +75,7 @@ class SendSMSQueueTask(QueueTask):
 class PauseQueueTask(QueueTask):
     def __init__(self, modem, number, **kwargs):
         QueueTask.__init__(self, modem, number, **kwargs)
-        self.sleep = 7
+        self.sleep = 5
 
     def run(self):
         self.spawned_tasks.append(GetStoredSMSQueueTask(self.modem, self.number, priority=0))
