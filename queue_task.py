@@ -56,7 +56,7 @@ class HandleIncomingSMSQueueTask(QueueTask):
             print('Received Status Report', flush=True)
             self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
         else:
-            print('Received SMS ' + self.sms.text, flush=True)
+            # print('Received SMS ' + self.sms.text, flush=True)
             data = {'msg_index': self.sms.msgIndex ,'time': self.sms.time.isoformat(), 'recipient': self.number, 'sender': self.sms.number, 'message': emoji.demojize(self.sms.text) }
             payload = {"id":self.sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
             self.payload_responses.append(payload)
