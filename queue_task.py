@@ -34,7 +34,10 @@ class GetStoredSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
-        storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
+        try:
+            storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
+        except:
+            storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
         if storedMessages is not None:
             for sms in storedMessages:
                 if type(sms) is StatusReport:
