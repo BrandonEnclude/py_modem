@@ -171,7 +171,7 @@ class SerialListener(Thread):
     async def get_stored_messages_worker(self):
         while True:
             await self.get_stored_messages()
-            await asyncio.sleep(30)
+            await asyncio.sleep(10)
 
     async def send_sms(self, msgId, recipient, text):
         self.modem.pauseCallback()
@@ -204,7 +204,7 @@ class SerialListener(Thread):
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
         self.callback = smsReceivedCallbackFunc
-        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
+        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc, AT_CNMI='3,1,0,2')
 
     def pauseCallback(self):
         self.smsReceivedCallback = self._placeholderCallback
