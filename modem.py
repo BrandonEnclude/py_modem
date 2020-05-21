@@ -174,7 +174,6 @@ class SerialListener(Thread):
             await asyncio.sleep(10)
 
     async def send_sms(self, msgId, recipient, text):
-        self.modem.pauseCallback()
         task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)
         self.queue.put_nowait(task)
 
