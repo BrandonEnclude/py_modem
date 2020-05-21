@@ -202,8 +202,8 @@ class SerialListener(Thread):
     async def close(self):
         return await asyncio.coroutine(self.modem.close)()
 
-    async def get_stored_messages(self):
-        task = GetStoredSMSQueueTask(self.modem, self.number, priority=1)
+    async def get_stored_messages(self, done = None):
+        task = GetStoredSMSQueueTask(self.modem, self.number, priority=1, done = done)
         self.queue.put_nowait(task)
 
     def handle_sms(self, sms):
