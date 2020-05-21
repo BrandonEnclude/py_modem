@@ -206,7 +206,8 @@ class Modem(GsmModem):
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
 
     # Overrides method due to modem peculiarities
-    def deleteStoredSms(self, index, memory=None):
+    def deleteStoredSms(self, index, memory='MT'):
+        self._setSmsMemory(readDelete=memory)
         self.write('AT+CMGD={0}'.format(index))
 
     def _handleSmsReceived(self, notificationLine):
@@ -223,7 +224,7 @@ class Modem(GsmModem):
                     logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
                     
     # Revised method to include memory index on the Sms object for future deletion
-    def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory=None):
+    def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory='MT'):
         self._setSmsMemory(readDelete=memory)
         messages = []
         cmglRegex = re.compile(r'^\+CMGL:\s*(\d+),\s*(\d+),.*$')
