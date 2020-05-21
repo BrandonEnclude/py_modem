@@ -132,7 +132,7 @@ class SerialListener(Thread):
         self.smsTextMode = smsTextMode
         self.queue = asyncio.PriorityQueue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.handle_sms)
+        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=None)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
@@ -182,8 +182,7 @@ class SerialListener(Thread):
 
     async def get_stored_messages_worker(self):
         while True:
-            await asyncio.sleep(5)
-            print('Getting stored messages...', flush=True)
+            await asyncio.sleep(10)
             await self.get_stored_messages()
 
     async def send_sms(self, msgId, recipient, text):
