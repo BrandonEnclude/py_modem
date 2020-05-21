@@ -45,6 +45,7 @@ class GetStoredSMSQueueTask(QueueTask):
                     pass
                     # self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
                 else:
+                    print(data, flush=True)
                     data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
                     payload = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
                     self.payload_responses.append(payload)
