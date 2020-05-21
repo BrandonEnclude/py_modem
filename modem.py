@@ -2,6 +2,7 @@ from types import MethodType
 from gsmmodem.modem import GsmModem, StatusReport, Sms, ReceivedSms
 from gsmmodem.pdu import decodeSmsPdu
 from gsmmodem.exceptions import TimeoutException
+from gsmmodem.util import parseTextModeTimeStr
 from threading import Thread
 from queue_task import DeleteSMSQueueTask, GetStoredSMSQueueTask, HandleIncomingSMSQueueTask, SendSMSQueueTask
 import time
