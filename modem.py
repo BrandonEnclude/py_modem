@@ -12,7 +12,7 @@ import json
 import re
 import serial
 
-logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
 
 class SIMS:
     def __init__(self, sims, socket):
@@ -171,7 +171,7 @@ class SerialListener(Thread):
     async def get_stored_messages_worker(self):
         while True:
             await self.get_stored_messages()
-            await asyncio.sleep(20)
+            await asyncio.sleep(10)
 
     async def send_sms(self, msgId, recipient, text):
         task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)

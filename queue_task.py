@@ -38,12 +38,11 @@ class GetStoredSMSQueueTask(QueueTask):
             stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
         except (TimeoutException, CmeError, CmsError) as e:
             self.modem.reconnect()
-            print('One timeout', flush=True)
+        print(stored_messages, flush=True)
         if stored_messages is not None:
             for sms in stored_messages:
                 if type(sms) is StatusReport:
-                    pass
-                    # self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
+                    self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
                 else:
                     data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text}
                     print(data, flush=True)
