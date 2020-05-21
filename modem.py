@@ -182,8 +182,8 @@ class SerialListener(Thread):
 
     async def get_stored_messages_worker(self):
         while True:
-            await asyncio.sleep(60)
             await self.get_stored_messages()
+            await asyncio.sleep(60)
 
     async def send_sms(self, msgId, recipient, text):
         self.modem.pauseCallback()
