@@ -204,7 +204,7 @@ class SerialListener(Thread):
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
         self.callback = smsReceivedCallbackFunc
-        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc, AT_CNMI='3,1,0,2')
+        GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
 
     def pauseCallback(self):
         self.smsReceivedCallback = self._placeholderCallback
