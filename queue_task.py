@@ -33,6 +33,8 @@ class GetStoredSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
+        busy = self.modem.gsmBusy
+        print(busy, flush=True)
         stored_messages = None
         try:
             stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
