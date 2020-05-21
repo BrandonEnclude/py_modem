@@ -258,7 +258,7 @@ class Modem(GsmModem):
         messages = []
         if self.smsTextMode:
             cmglRegex= re.compile('^\+CMGL: (\d+),"([^"]+)","([^"]+)",[^,]*,"([^"]+)"$')
-            for key, val in dictItemsIter(Sms.TEXT_MODE_STATUS_MAP):
+            for key, val in dict.items(Sms.TEXT_MODE_STATUS_MAP):
                 if status == val:
                     statusStr = key
                     break
