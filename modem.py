@@ -132,7 +132,7 @@ class SerialListener(Thread):
         self.smsTextMode = smsTextMode
         self.queue = asyncio.PriorityQueue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.handle_sms)
+        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=None)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
@@ -206,12 +206,6 @@ class Modem(GsmModem):
         self.callback = smsReceivedCallbackFunc
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
 
-    def pauseCallback(self):
-        self.smsReceivedCallback = self._placeholderCallback
-
-    def restartCallback(self):
-        self.smsReceivedCallback = self.callback
-
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory=None):
         self.write('AT+CMGD={0}'.format(index))
@@ -231,30 +225,102 @@ class Modem(GsmModem):
                     
     # Revised method to include memory index on the Sms object for future deletion
     def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory=None):
+        # self._setSmsMemory(readDelete=memory)
+        # messages = []
+        # cmglRegex = re.compile(r'^\+CMGL:\s*(\d+),\s*(\d+),.*$')
+        # readPdu = False
+        # result = self.write('AT+CMGL={0}'.format(status))
+        # for line in result:
+        #     if not readPdu:
+        #         cmglMatch = cmglRegex.match(line)
+        #         if cmglMatch:
+        #             msgIndex = int(cmglMatch.group(1))
+        #             msgStat = int(cmglMatch.group(2))
+        #             readPdu = True
+        #     else:
+        #         try:
+        #             smsDict = decodeSmsPdu(line)
+        #         except Exception as e:
+        #             logging.error(' at %s', 'Modem.listStoredSmsWithIndex', exc_info=e)
+        #             pass
+        #         else:
+        #             if smsDict['type'] == 'SMS-DELIVER':
+        #                 sms = ReceivedSms(self, int(msgStat), smsDict['number'], smsDict['time'], smsDict['text'], smsDict['smsc'], smsDict.get('udh', []))
+        #             elif smsDict['type'] == 'SMS-STATUS-REPORT':
+        #                 sms = StatusReport(self, int(msgStat), smsDict['reference'], smsDict['number'], smsDict['time'], smsDict['discharge'], smsDict['status'])
+        #             sms.msgIndex = msgIndex
+        #             messages.append(sms)
+        #             readPdu = False
+        # return messages
         self._setSmsMemory(readDelete=memory)
         messages = []
-        cmglRegex = re.compile(r'^\+CMGL:\s*(\d+),\s*(\d+),.*$')
-        readPdu = False
-        result = self.write('AT+CMGL={0}'.format(status))
-        for line in result:
-            if not readPdu:
+        delMessages = set()
+        if self.smsTextMode:
+            cmglRegex= re.compile('^\+CMGL: (\d+),"([^"]+)","([^"]+)",[^,]*,"([^"]+)"$')
+            for key, val in dictItemsIter(Sms.TEXT_MODE_STATUS_MAP):
+                if status == val:
+                    statusStr = key
+                    break
+            else:
+                raise ValueError('Invalid status value: {0}'.format(status))
+            result = self.write('AT+CMGL="{0}"'.format(statusStr))
+            msgLines = []
+            msgIndex = msgStatus = number = msgTime = None
+            for line in result:
                 cmglMatch = cmglRegex.match(line)
                 if cmglMatch:
-                    msgIndex = int(cmglMatch.group(1))
-                    msgStat = int(cmglMatch.group(2))
-                    readPdu = True
-            else:
-                try:
-                    smsDict = decodeSmsPdu(line)
-                except Exception as e:
-                    logging.error(' at %s', 'Modem.listStoredSmsWithIndex', exc_info=e)
-                    pass
+                    # New message; save old one if applicable
+                    if msgIndex != None and len(msgLines) > 0:
+                        msgText = '\n'.join(msgLines)
+                        msgLines = []
+                        messages.append(ReceivedSms(self, Sms.TEXT_MODE_STATUS_MAP[msgStatus], number, parseTextModeTimeStr(msgTime), msgText))
+                        delMessages.add(int(msgIndex))
+                    msgIndex, msgStatus, number, msgTime = cmglMatch.groups()
+                    msgLines = []
                 else:
-                    if smsDict['type'] == 'SMS-DELIVER':
-                        sms = ReceivedSms(self, int(msgStat), smsDict['number'], smsDict['time'], smsDict['text'], smsDict['smsc'], smsDict.get('udh', []))
-                    elif smsDict['type'] == 'SMS-STATUS-REPORT':
-                        sms = StatusReport(self, int(msgStat), smsDict['reference'], smsDict['number'], smsDict['time'], smsDict['discharge'], smsDict['status'])
-                    sms.msgIndex = msgIndex
-                    messages.append(sms)
-                    readPdu = False
+                    if line != 'OK':
+                        msgLines.append(line)
+            if msgIndex != None and len(msgLines) > 0:
+                msgText = '\n'.join(msgLines)
+                msgLines = []
+                messages.append(ReceivedSms(self, Sms.TEXT_MODE_STATUS_MAP[msgStatus], number, parseTextModeTimeStr(msgTime), msgText))
+                delMessages.add(int(msgIndex))
+        else:
+            cmglRegex = re.compile('^\+CMGL:\s*(\d+),\s*(\d+),.*$')
+            readPdu = False
+            result = self.write('AT+CMGL={0}'.format(status))
+            for line in result:
+                if not readPdu:
+                    cmglMatch = cmglRegex.match(line)
+                    if cmglMatch:
+                        msgIndex = int(cmglMatch.group(1))
+                        msgStat = int(cmglMatch.group(2))
+                        readPdu = True
+                else:
+                    try:
+                        smsDict = decodeSmsPdu(line)
+                    except EncodingError:
+                        self.log.debug('Discarding line from +CMGL response: %s', line)
+                    except:
+                        pass
+                        # dirty fix warning: https://github.com/yuriykashin/python-gsmmodem/issues/1
+                        # todo: make better fix
+                    else:
+                        if smsDict['type'] == 'SMS-DELIVER':
+                            sms = ReceivedSms(self, int(msgStat), smsDict['number'], smsDict['time'], smsDict['text'], smsDict['smsc'], smsDict.get('udh', []))
+                        elif smsDict['type'] == 'SMS-STATUS-REPORT':
+                            sms = StatusReport(self, int(msgStat), smsDict['reference'], smsDict['number'], smsDict['time'], smsDict['discharge'], smsDict['status'])
+                        else:
+                            raise CommandError('Invalid PDU type for readStoredSms(): {0}'.format(smsDict['type']))
+                        sms.msgIndex = msgIndex
+                        messages.append(sms)
+                        delMessages.add(msgIndex)
+                        readPdu = False
+        if delete:
+            if status == Sms.STATUS_ALL:
+                # Delete all messages
+                self.deleteMultipleStoredSms()
+            else:
+                for msgIndex in delMessages:
+                    self.deleteStoredSms(msgIndex)
         return messages
