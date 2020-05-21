@@ -13,7 +13,7 @@ import json
 import re
 import serial
 
-logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
+logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.DEBUG)
 
 class SIMS:
     def __init__(self, sims, socket):
