@@ -13,7 +13,7 @@ import json
 import re
 import serial
 
-logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='error.log', filemode='a', format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s', level=logging.ERROR)
 
 class SIMS:
     def __init__(self, sims, socket):
@@ -132,7 +132,7 @@ class SerialListener(Thread):
         self.BAUDRATE = BAUDRATE
         self.queue = asyncio.PriorityQueue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=None)
+        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.handle_sms)
         self.modem.smsTextMode = True 
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
@@ -142,7 +142,7 @@ class SerialListener(Thread):
             logging.error('at %s', 'SerialListener.__init__', exc_info=e)
             self.status = repr(e)
         else:
-            asyncio.create_task(self.get_stored_messages_worker())
+            # asyncio.create_task(self.get_stored_messages_worker())
             asyncio.create_task(self.queue_worker(self.queue))
 
     def run(self):
