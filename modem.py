@@ -228,7 +228,7 @@ class Modem(GsmModem):
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
 
     def pauseCallback(self):
-        self.smsReceivedCallback = self.__placeholderCallback
+        self.smsReceivedCallback = self._placeholderCallback
 
     def restartCallback(self):
         self.smsReceivedCallback = self.callback
