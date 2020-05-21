@@ -1,15 +1,13 @@
 import emoji
 import time
-from gsmmodem.modem import StatusReport
+from gsmmodem.modem import StatusReport, TimeoutException
 class QueueTask:
-    def __init__(self, modem, number, priority = 10, done = None):
+    def __init__(self, modem, number, priority = 10):
         self.modem = modem
         self.number = number
         self.payload_responses = []
         self.spawned_tasks = []
         self.priority = priority
-        self.sleep = 0
-        self.done = done
 
     def __lt__(self, other):
         return self.priority < other.priority
@@ -35,18 +33,23 @@ class GetStoredSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
-        time.sleep(3)
-        storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
-        if storedMessages is not None:
-            for sms in storedMessages:
-                if type(sms) is StatusReport:
-                    self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
-                else:
-                    data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
-                    payload = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-                    self.payload_responses.append(payload)
-        if self.done:
-            self.done()
+        try:
+            storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
+        except TimeoutException:
+            time.sleep(3)
+            try:
+                storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
+            except TimeoutException:
+                pass
+        else:
+            if storedMessages is not None:
+                for sms in storedMessages:
+                    if type(sms) is StatusReport:
+                        self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
+                    else:
+                        data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
+                        payload = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
+                        self.payload_responses.append(payload)
 
 class HandleIncomingSMSQueueTask(QueueTask):
     def __init__(self, modem, number, sms, **kwargs):
@@ -78,12 +81,3 @@ class SendSMSQueueTask(QueueTask):
             status = 'Delivered'
             payload_response = {'id': int(time.time()), 'jsonrpc':'2.0','method':'sms_server.sent_status','params':{'msgId': self.msgId, 'message': f'{status}'}}
             self.payload_responses.append(payload_response)
-
-class PauseQueueTask(QueueTask):
-    def __init__(self, modem, number, **kwargs):
-        QueueTask.__init__(self, modem, number, **kwargs)
-        self.sleep = 5
-
-    def run(self):
-        # self.spawned_tasks.append(GetStoredSMSQueueTask(self.modem, self.number, priority=0))
-        pass
