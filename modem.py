@@ -156,7 +156,7 @@ class SerialListener(Thread):
         loop = asyncio.get_event_loop()
         while True:
             task = await queue.get()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 try:
                     await loop.run_in_executor(pool, task.run)
                 except Exception as e:
