@@ -3,7 +3,7 @@ from gsmmodem.modem import GsmModem, StatusReport, Sms, ReceivedSms
 from gsmmodem.pdu import decodeSmsPdu
 from gsmmodem.exceptions import TimeoutException
 from threading import Thread
-from queue_task import DeleteSMSQueueTask, GetStoredSMSQueueTask, HandleIncomingSMSQueueTask, SendSMSQueueTask, PauseQueueTask
+from queue_task import DeleteSMSQueueTask, GetStoredSMSQueueTask, HandleIncomingSMSQueueTask, SendSMSQueueTask
 import time
 import logging
 import asyncio
@@ -173,21 +173,11 @@ class SerialListener(Thread):
             if queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
                 tasks_since_pause = 0
                 await self.get_stored_messages()
-                # await self.queue_pause()
 
             elif isinstance(task, SendSMSQueueTask):
                 tasks_since_pause += 1
 
             queue.task_done()
-
-    async def pause_for_incoming(self):
-        task_in_queue = False
-        for item in self.queue._queue:
-            if isinstance(item, PauseQueueTask):
-                task_in_queue = True
-                break
-        if not task_in_queue:
-            await self.queue_pause()
 
     async def send_sms(self, msgId, recipient, text):
         self.modem.pauseCallback()
@@ -207,10 +197,6 @@ class SerialListener(Thread):
 
     def handle_sms(self, sms):
         task = HandleIncomingSMSQueueTask(self.modem, self.number, sms, priority=3)
-        self.queue.put_nowait(task)
-
-    async def queue_pause(self):
-        task = PauseQueueTask(self.modem, self.number, priority=0)
         self.queue.put_nowait(task)
 
     @property
