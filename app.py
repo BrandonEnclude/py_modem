@@ -75,7 +75,6 @@ class App:
         try:
             await self._connect_sims()
             await self.sim_status()
-            # await self.sims.get_stored_messages()
         except Exception as e:
             logging.error('at %s', 'App.available_sims', exc_info=e)
 

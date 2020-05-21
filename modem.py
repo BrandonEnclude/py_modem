@@ -154,7 +154,6 @@ class SerialListener(Thread):
     
     async def queue_worker(self, queue):
         loop = asyncio.get_event_loop()
-        # tasks_since_pause = 0
         while True:
             task = await queue.get()
             with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
@@ -167,23 +166,12 @@ class SerialListener(Thread):
                 for task in task.spawned_tasks:
                     self.queue.put_nowait(task)
 
-            # if tasks_since_pause >= 5:
-            #     tasks_since_pause = 0
-            #     await self.get_stored_messages()
-
-            # if queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
-            #     tasks_since_pause = 0
-            #     await self.get_stored_messages()
-
-            # elif isinstance(task, SendSMSQueueTask):
-            #     tasks_since_pause += 1
-
             queue.task_done()
 
     async def get_stored_messages_worker(self):
         while True:
             await self.get_stored_messages()
-            await asyncio.sleep(60)
+            await asyncio.sleep(30)
 
     async def send_sms(self, msgId, recipient, text):
         self.modem.pauseCallback()
