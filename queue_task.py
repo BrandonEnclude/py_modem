@@ -38,7 +38,7 @@ class GetStoredSMSQueueTask(QueueTask):
             stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
         except (TimeoutException, CmeError, CmsError) as e:
             self.modem.reconnect()
-            # print('One timeout', flush=True)
+            print('One timeout', flush=True)
             # print(repr(e), flush=True)
             # try:
             #     stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
