@@ -63,7 +63,8 @@ class SendSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
         self.msgId = msgId
         self.recipient = recipient
-        self.text = emoji.demojize(text)
+        # self.text = emoji.demojize(text)
+        self.text = text
 
     def run(self):
         try:
