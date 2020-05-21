@@ -33,6 +33,7 @@ class GetStoredSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
+        time.sleep(1)
         try:
             stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
         except (TimeoutException, CmeError, CmsError):
