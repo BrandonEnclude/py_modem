@@ -202,13 +202,15 @@ class SerialListener(Thread):
 
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
-        self.callback = smsReceivedCallbackFunc
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc, requestDelivery=False)
 
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory='MT'):
         self._setSmsMemory(readDelete=memory)
         self.write('AT+CMGD={0}'.format(index))
+
+    def reconnect(self):
+        self.connect(self.port, self.baudrate, self.smsReceivedCallback)
 
     # def _handleSmsReceived(self, notificationLine):
     #     if self.smsReceivedCallback is not None:
