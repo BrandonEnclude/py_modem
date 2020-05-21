@@ -39,13 +39,6 @@ class GetStoredSMSQueueTask(QueueTask):
         except (TimeoutException, CmeError, CmsError) as e:
             self.modem.reconnect()
             print('One timeout', flush=True)
-            # print(repr(e), flush=True)
-            # try:
-            #     stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
-            # except (TimeoutException, CmeError, CmsError):
-            #     print('Two timeouts, ha ha ha', flush=True)
-            #     print(repr(e), flush=True)
-            #     pass
         if stored_messages is not None:
             for sms in stored_messages:
                 if type(sms) is StatusReport:

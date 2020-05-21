@@ -121,7 +121,7 @@ class SIM:
             return False
 
 class SerialListener(Thread):
-    def __init__(self, number, port, pin, socket, BAUDRATE = 115200, smsTextMode = False):
+    def __init__(self, number, port, pin, socket, BAUDRATE = 115200):
         Thread.__init__(self)
         self.number = number
         self.port = port
@@ -129,10 +129,10 @@ class SerialListener(Thread):
         self.socket = socket
         self.status = None
         self.BAUDRATE = BAUDRATE
-        self.smsTextMode = smsTextMode
         self.queue = asyncio.PriorityQueue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
         self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=None)
+        self.modem.smsTextMode = False 
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
