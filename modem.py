@@ -156,7 +156,7 @@ class SerialListener(Thread):
         tasks_since_pause = 0
         while True:
             task = await queue.get()
-            await asyncio.sleep(task.sleep)
+            # await asyncio.sleep(task.sleep)
             with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
                 try:
                     await loop.run_in_executor(pool, task.run)
@@ -173,7 +173,7 @@ class SerialListener(Thread):
 
             if queue.qsize() == 0 and isinstance(task, SendSMSQueueTask):
                 tasks_since_pause = 0
-                await self.get_stored_messages()
+                await self.get_stored_messages(done = self.modem.restartCallback)
                 # await self.queue_pause()
 
             elif isinstance(task, SendSMSQueueTask):
@@ -191,6 +191,7 @@ class SerialListener(Thread):
             await self.queue_pause()
 
     async def send_sms(self, msgId, recipient, text):
+        self.modem.pauseCallback()
         task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)
         self.queue.put_nowait(task)
 
@@ -223,7 +224,14 @@ class SerialListener(Thread):
 
 class Modem(GsmModem):
     def __init__(self, port, BAUDRATE, smsReceivedCallbackFunc):
+        self.callback = smsReceivedCallbackFunc
         GsmModem.__init__(self, port, BAUDRATE, smsReceivedCallbackFunc=smsReceivedCallbackFunc)
+
+    def pauseCallback(self):
+        self.smsReceivedCallback = self.__placeholderCallback
+
+    def restartCallback(self):
+        self.smsReceivedCallback = self.callback
 
     # Overrides method due to modem peculiarities
     def deleteStoredSms(self, index, memory=None):

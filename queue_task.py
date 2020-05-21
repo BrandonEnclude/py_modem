@@ -2,13 +2,14 @@ import emoji
 import time
 from gsmmodem.modem import StatusReport
 class QueueTask:
-    def __init__(self, modem, number, priority = 10):
+    def __init__(self, modem, number, priority = 10, done = None):
         self.modem = modem
         self.number = number
         self.payload_responses = []
         self.spawned_tasks = []
         self.priority = priority
         self.sleep = 0
+        self.done = done
 
     def __lt__(self, other):
         return self.priority < other.priority
@@ -44,6 +45,8 @@ class GetStoredSMSQueueTask(QueueTask):
                     data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
                     payload = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
                     self.payload_responses.append(payload)
+        if self.done:
+            self.done()
 
 class HandleIncomingSMSQueueTask(QueueTask):
     def __init__(self, modem, number, sms, **kwargs):
