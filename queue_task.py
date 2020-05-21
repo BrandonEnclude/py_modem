@@ -1,6 +1,6 @@
 import emoji
 import time
-from gsmmodem.modem import StatusReport, TimeoutException
+from gsmmodem.modem import StatusReport, TimeoutException, CmeError, CmsError
 class QueueTask:
     def __init__(self, modem, number, priority = 10):
         self.modem = modem
@@ -35,7 +35,7 @@ class GetStoredSMSQueueTask(QueueTask):
     def run(self):
         try:
             stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
-        except TimeoutException:
+        except (TimeoutException, CmeError, CmsError):
             pass
         else:
             if stored_messages is not None:
