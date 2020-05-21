@@ -179,18 +179,18 @@ class SerialListener(Thread):
         self.queue.put_nowait(task)
 
     async def delete_stored_sms(self, msg_index):
-        task = DeleteSMSQueueTask(self.modem, self.number, msg_index, priority=1)
+        task = DeleteSMSQueueTask(self.modem, self.number, msg_index, priority=2)
         self.queue.put_nowait(task)
 
     async def close(self):
         return await asyncio.coroutine(self.modem.close)()
 
     async def get_stored_messages(self):
-        task = GetStoredSMSQueueTask(self.modem, self.number, priority=3)
+        task = GetStoredSMSQueueTask(self.modem, self.number, priority=1)
         self.queue.put_nowait(task)
 
     def handle_sms(self, sms):
-        task = HandleIncomingSMSQueueTask(self.modem, self.number, sms, priority=2)
+        task = HandleIncomingSMSQueueTask(self.modem, self.number, sms, priority=3)
         self.queue.put_nowait(task)
 
     @property
