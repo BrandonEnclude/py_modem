@@ -33,23 +33,23 @@ class GetStoredSMSQueueTask(QueueTask):
         QueueTask.__init__(self, modem, number, **kwargs)
 
     def run(self):
+        stored_messages = None
         try:
-            storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
+            stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
         except TimeoutException:
             time.sleep(3)
             try:
-                storedMessages = self.modem.listStoredSmsWithIndex(memory=self.memory)
+                stored_messages = self.modem.listStoredSmsWithIndex(memory=self.memory)
             except TimeoutException:
                 pass
-        else:
-            if storedMessages is not None:
-                for sms in storedMessages:
-                    if type(sms) is StatusReport:
-                        self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
-                    else:
-                        data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
-                        payload = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
-                        self.payload_responses.append(payload)
+        if stored_messages is not None:
+            for sms in stored_messages:
+                if type(sms) is StatusReport:
+                    self.spawned_tasks.append(DeleteSMSQueueTask(self.modem, self.number, sms.msgIndex, priority=1))
+                else:
+                    data = {'msg_index': sms.msgIndex ,'time': sms.time.isoformat(), 'recipient': self.number, 'sender': sms.number, 'message': sms.text }
+                    payload = {"id":sms.msgIndex, "jsonrpc":"2.0","method":"sms_server.on_received","params":{"data": data}}
+                    self.payload_responses.append(payload)
 
 class HandleIncomingSMSQueueTask(QueueTask):
     def __init__(self, modem, number, sms, **kwargs):
