@@ -4,7 +4,7 @@ from gsmmodem.pdu import decodeSmsPdu
 from gsmmodem.exceptions import TimeoutException
 from gsmmodem.util import parseTextModeTimeStr
 from threading import Thread
-from queue_task import DeleteSMSQueueTask, GetStoredSMSQueueTask, HandleIncomingSMSQueueTask, SendSMSQueueTask
+from queue_task import DeleteSMSQueueTask, PauseQueueTask, SendSMSQueueTask
 import time
 import logging
 import asyncio
@@ -32,10 +32,6 @@ class SIMS:
     async def close_all(self):
         for key in self.sims.keys():
             await self.sims[key].close()
-
-    async def get_stored_messages(self):
-        for key in self.sims.keys():
-            await self.sims[key].get_stored_messages()
 
     def to_dict(self):
         sims = {}
@@ -97,10 +93,6 @@ class SIM:
             self.listener = None
         self.listener = SerialListener(self.number, self.port, self.pin, self.socket)
         
-    async def get_stored_messages(self):
-        if self.listener:
-            await self.listener.get_stored_messages()
-
     async def disconnect(self):
         if self.listener is not None:
             asyncio.create_task(self.listener.close())
@@ -132,8 +124,7 @@ class SerialListener(Thread):
         self.BAUDRATE = BAUDRATE
         self.queue = asyncio.PriorityQueue()
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=self.handle_sms)
-        # self.modem.smsTextMode = True 
+        self.modem = Modem(self.port, self.BAUDRATE, smsReceivedCallbackFunc=None)
         try:
             self.modem.connect(pin=pin, waitingForModemToStartInSeconds=2) if self.pin else self.modem.connect(waitingForModemToStartInSeconds=2)
         except TimeoutException as e:
@@ -142,7 +133,7 @@ class SerialListener(Thread):
             logging.error('at %s', 'SerialListener.__init__', exc_info=e)
             self.status = repr(e)
         else:
-            # asyncio.create_task(self.get_stored_messages_worker())
+            asyncio.create_task(self.pause_queue_worker())
             asyncio.create_task(self.queue_worker(self.queue))
 
     def run(self):
@@ -166,32 +157,31 @@ class SerialListener(Thread):
                     await self.socket.send(json.dumps(payload))
                 for task in task.spawned_tasks:
                     self.queue.put_nowait(task)
-
             queue.task_done()
 
-    async def get_stored_messages_worker(self):
+    async def pause_queue_worker(self):
         while True:
-            await self.get_stored_messages()
-            await asyncio.sleep(10)
+            await self.pause_queue()
+            await asyncio.sleep(15)
 
     async def send_sms(self, msgId, recipient, text):
         task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)
         self.queue.put_nowait(task)
 
     async def delete_stored_sms(self, msg_index):
-        task = DeleteSMSQueueTask(self.modem, self.number, msg_index, priority=2)
+        task = DeleteSMSQueueTask(self.modem, self.number, msg_index, priority=1)
         self.queue.put_nowait(task)
 
     async def close(self):
         return await asyncio.coroutine(self.modem.close)()
 
-    async def get_stored_messages(self):
-        task = GetStoredSMSQueueTask(self.modem, self.number, priority=1)
-        self.queue.put_nowait(task)
-
-    def handle_sms(self, sms):
-        task = HandleIncomingSMSQueueTask(self.modem, self.number, sms, priority=3)
-        self.queue.put_nowait(task)
+    async def pause_queue(self):
+        for task in self.queue._queue:
+            if type(task) is PauseQueueTask:
+                return
+        else:
+            task = PauseQueueTask(self.modem, self.number, priority=3)
+            self.queue.put_nowait(task)
 
     @property
     def signal_strength(self):
@@ -210,22 +200,9 @@ class Modem(GsmModem):
         self._setSmsMemory(readDelete=memory)
         self.write('AT+CMGD={0}'.format(index))
 
-    def reconnect(self):
-        self.connect(self.port, self.baudrate, self.smsReceivedCallback)
-
     def _handleSmsReceived(self, notificationLine):
-        if self.smsReceivedCallback is not None:
-            cmtiMatch = self.CMTI_REGEX.match(notificationLine)
-            if cmtiMatch:
-                msgMemory = cmtiMatch.group(1)
-                msgIndex = cmtiMatch.group(2)
-                sms = self.readStoredSms(msgIndex, msgMemory)
-                sms.msgIndex = msgIndex
-                try:
-                    self.smsReceivedCallback(sms)
-                except Exception as e:
-                    logging.error('at %s', 'Modem._handleSmsReceived', exc_info=e)
-                    
+        pass
+
     # Revised method to include memory index on the Sms object for future deletion
     def listStoredSmsWithIndex(self, status=Sms.STATUS_ALL, memory=None):
         self._setSmsMemory(readDelete=memory)
@@ -255,38 +232,3 @@ class Modem(GsmModem):
                     messages.append(sms)
                     readPdu = False
         return messages
-        # self._setSmsMemory(readDelete=memory)
-        # messages = []
-        # if self.smsTextMode:
-        #     cmglRegex= re.compile('^\+CMGL: (\d+),"([^"]+)","([^"]+)",[^,]*,"([^"]+)"$')
-        #     for key, val in dict.items(Sms.TEXT_MODE_STATUS_MAP):
-        #         if status == val:
-        #             statusStr = key
-        #             break
-        #     else:
-        #         raise ValueError('Invalid status value: {0}'.format(status))
-        #     result = self.write('AT+CMGL="{0}"'.format(statusStr))
-        #     msgLines = []
-        #     msgIndex = msgStatus = number = msgTime = None
-        #     for line in result:
-        #         cmglMatch = cmglRegex.match(line)
-        #         if cmglMatch:
-        #             # New message; save old one if applicable
-        #             if msgIndex != None and len(msgLines) > 0:
-        #                 msgText = '\n'.join(msgLines)
-        #                 msgLines = []
-        #                 sms = ReceivedSms(self, Sms.TEXT_MODE_STATUS_MAP[msgStatus], number, parseTextModeTimeStr(msgTime), msgText)
-        #                 sms.msgIndex = msgIndex
-        #                 messages.append(sms)
-        #             msgIndex, msgStatus, number, msgTime = cmglMatch.groups()
-        #             msgLines = []
-        #         else:
-        #             if line != 'OK':
-        #                 msgLines.append(line)
-        #     if msgIndex != None and len(msgLines) > 0:
-        #         msgText = '\n'.join(msgLines)
-        #         msgLines = []
-        #         sms = ReceivedSms(self, Sms.TEXT_MODE_STATUS_MAP[msgStatus], number, parseTextModeTimeStr(msgTime), msgText)
-        #         sms.msgIndex = msgIndex
-        #         messages.append(sms)
-        # return messages

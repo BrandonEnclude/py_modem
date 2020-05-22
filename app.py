@@ -59,6 +59,7 @@ class App:
             pass
         except Exception as e:
             logging.error('at %s', 'App._tear_down', exc_info=e)
+        await asyncio.sleep(delay)
         self.stay_connected = False
 
     def _extract_params(self, jsonrpc):
