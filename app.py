@@ -38,7 +38,7 @@ class App:
                     asyncio.create_task(self._on_message(msg))
         except websockets.exceptions.ConnectionClosed:
             print('Websocked closed unexpectedly.', flush=True)
-            await self._tear_down(3)
+            await self._tear_down()
         except Exception as e:
             print('Websocked closed unexpectedly.' + repr(e), flush=True)
             await self._tear_down()
@@ -99,7 +99,7 @@ class App:
             await self.sims.delete_stored_sms(sim_number, msg_index)
 
     async def reconnect(self):
-        await self._tear_down(3)
+        await self._tear_down(delay = 3)
 
 if __name__ == "__main__":
     app = App(URI)
