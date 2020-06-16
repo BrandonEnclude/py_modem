@@ -162,7 +162,7 @@ class SerialListener(Thread):
     async def pause_queue_worker(self):
         while True:
             await self.pause_queue()
-            await asyncio.sleep(15)
+            await asyncio.sleep(60)
 
     async def send_sms(self, msgId, recipient, text):
         task = SendSMSQueueTask(self.modem, self.number, msgId, recipient, text)
